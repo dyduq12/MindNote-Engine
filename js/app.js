@@ -2,11 +2,10 @@
  * app.js
  * Orquestracao geral.
  *
- * Fase 1: Parser e Validacao do contrato JSON (secao 3.1 do documento
- * mestre e revisao critica do motor, Passo 4).
- * Fase 2: apos validar, a arvore e enriquecida com o objeto
- * "dimensoes" por no, via enriquecerArvoreComDimensoes (engine.text.js),
- * usando a escala de entrelinha informada na UI (padrao 68px).
+ * Fase 1: Parser e Validacao do contrato JSON.
+ * Fase 2: enriquecimento da arvore com dimensoes (titulo/anotacao).
+ * Fase 3: calculo geometrico absoluto (coordenadas X/Y e curvas de
+ * Bezier), via calcularCoordenadas (engine.geometry.js).
  */
 
 function normalizarAnotacao(anotacao) {
@@ -89,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const escalaEntrelinha = (Number.isFinite(escalaInformada) && escalaInformada > 0) ? escalaInformada : 68;
 
       enriquecerArvoreComDimensoes(arvoreValidada, escalaEntrelinha);
+      calcularCoordenadas(arvoreValidada);
       renderDebugTextual(arvoreValidada, areaDebug);
     } catch (erro) {
       areaErro.textContent = erro.message;
