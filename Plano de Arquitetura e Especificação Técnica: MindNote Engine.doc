@@ -1,0 +1,262 @@
+Plano de Arquitetura e Especificação Técnica: MindNote Engine
+Este documento detalha a especificação técnica completa para o desenvolvimento do projeto MindNote Engine. O sistema tem como propósito converter esquemas estruturados extraídos via inteligência artificial (NotebookLM) em mapas mentais com expansão horizontal contínua, desenhados especificamente para escrita manual com caneta stylus no aplicativo StarNotes em tablets Android.
+O projeto prioriza portabilidade para desenvolvimento direto no tablet via editor Acode, geração vetorial contínua sem quebra de páginas em A4, calibração milimétrica da pauta de escrita e automação de compilação de APK através de computação em nuvem.
+1. Visão Geral e Justificativa do Projeto
+1.1 Contexto e Problemas das Ferramentas Convencionais
+Ferramentas tradicionais de geração de mapas mentais geram saídas estáticas otimizadas para leitura passiva em monitores convencionais ou exportações em imagens rasterizadas (PNG/JPEG). Ao importar tais saídas para aplicativos de anotações manuscritas como o StarNotes, surgem gargalos críticos:
+Degradação de Resolução: Imagens rasterizadas sofrem com perda de nitidez severa quando o usuário aplica zoom para escrever detalhes com a caneta.
+Ausência de Espaço Calibrado para Escrita: Caixas convencionais são ajustadas estritamente ao tamanho da fonte digital, obrigando o estudante a rabiscar fora de contexto ou apertar o traço.
+Origem Incorreta de Vetores: Linhas de conexão que partem de centros de imagens ou bordas arbitrárias sem harmonização geométrica com a hierarquia dos ramos.
+Quebras Artificiais de Página: Divisões em páginas A4 verticais fatiam ramos conceituais e caixas de anotação pela metade.
+1.2 Fluxo Operacional da Solução
+O ecossistema MindNote Engine opera através de uma pipeline modular composta por quatro etapas interdependentes:
+Extração e Estruturação: O NotebookLM processa o material teórico de aula e cospe uma árvore hierárquica estrita no padrão JSON, estimando a complexidade de cada item.
+Cálculo Espacial e Layout: O motor de layout executa um algoritmo recursivo bottom-up para dimensionar ramos e nós, prevenindo colisões no eixo Y e traçando curvas Bézier de alta precisão.
+Renderização Vetorial: O mapa é desenhado matematicamente em SVG dinâmico no navegador e convertido diretamente em comandos de desenho vetorial no PDF (sem intermediários de rasterização).
+Anotação Ativa: O PDF resultante é importado no StarNotes como documento de canvas contínuo, fornecendo pautas cinzas perfeitamente ajustadas ao tamanho da letra do estudante.
+2. Calibração Biométrica e Parâmetros Manuscritos
+2.1 Análise Empírica da Caligrafia
+Com base na aferição real das anotações manuscritas do estudante em documentos de literatura e gramática, foram identificados dois comportamentos de escrita bem definidos:
+Escrita Contínua em Bloco Amplo: Quando o pensamento flui em frases completas de margem a margem, a taxa média é de 9 a 10 palavras por linha (média medida: 10,3 palavras/linha).
+Escrita de Síntese em Blocos Compactos: Em tópicos pontuais, esquemas e anotações laterais, a densidade cai para 4 a 5 palavras por linha para garantir legibilidade sem quebras bruscas de palavras.
+2.2 Tabela de Constantes Geométricas
+A tabela a seguir consolida as constantes globais que alimentam as equações de posicionamento do motor:
+Parâmetro
+Valor Calibrado
+Justificativa Técnica
+ 
+Altura da Pauta (Entrelinha)
+68 px
+Equivale a aproximadamente 7,5 mm a 8 mm físicos na tela do tablet, conforto padrão de caderno universitário.
+Margem Interna da Caixa (Padding)
+40 px
+Evita que a ponta da caneta stylus colida com as bordas visuais ao iniciar ou terminar o traço.
+Largura do Bloco Quadrado
+600 px
+Acomoda de 4 a 5 palavras por linha com folga lateral adequada para anotações secundárias.
+Largura do Bloco Alongado
+1200 px
+Projetado para transcrição de definições lineares contínuas (9 a 10 palavras por linha).
+Multiplicador de Folga Dinâmica
++50% (+ 1 linha)
+Garante espaço sobressalente para anotações espontâneas feitas durante a aula.
+Espessura e Cor da Pauta
+1.0 pt / #D1D5DB
+Cinza neutro claro com contraste suave que guia o olho sem competir visualmente com a tinta digital.
+
+2.3 Algoritmos de Dimensionamento de Caixas
+O cálculo de altura de qualquer bloco de anotação pautado segue a fórmula:
+Altura Total da Caixa = (Padding_Top + Padding_Bottom) + (Linhas_Finais × Altura_Pauta)
+Altura Total = (40 + 40) + (Linhas_Finais × 68) = 80 + (Linhas_Finais × 68) px
+Onde Linhas_Finais é obtido pela estimativa de palavras dividida pela densidade do formato escolhido, acrescido do fator de folga de 50% com valor mínimo de segurança fixado em 3 linhas.
+3. Contrato de Dados e Engenharia de Prompt
+3.1 Estrutura do Esquema JSON
+O contrato de dados define a hierarquia da árvore e os atributos da célula de anotação lateral. Qualquer nó (seja raiz, intermediário ou folha) pode conter o objeto opcional anotacao:
+{
+  "titulo": "Figuras de Linguagem (Semântica)",
+  "anotacao": {
+    "tipo": "pauta",
+    "formato": "alongado",
+    "palavras_estimadas": 15,
+    "linhas_manuais": null
+  },
+  "filhos": [
+    {
+      "titulo": "Metáfora vs Comparação",
+      "anotacao": {
+        "tipo": "pauta",
+        "formato": "quadrado",
+        "palavras_estimadas": 20,
+        "linhas_manuais": null
+      },
+      "filhos": [
+        {
+          "titulo": "Metáfora",
+          "anotacao": {
+            "tipo": "pauta",
+            "formato": "quadrado",
+            "palavras_estimadas": 10,
+            "linhas_manuais": null
+          }
+        },
+        {
+          "titulo": "Esquema Comparativo",
+          "anotacao": {
+            "tipo": "ilustracao",
+            "formato": "quadrado",
+            "altura_customizada": 550
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+3.2 Prompt Mestre para o NotebookLM
+Abaixo está a instrução calibrada para ser executada sobre os cadernos de estudo do NotebookLM:
+Você é um arquiteto de mapas conceituais e síntese de estudos para o ENEM e vestibulares.
+Com base nos materiais fornecidos, gere uma estrutura hierárquica estrita em formato JSON.
+
+REGRAS DE FORMATAÇÃO E DIMENSIONAMENTO:
+1. Hierarquia: Estruture em Raiz -> Tópicos Principais -> Subtópicos.
+2. Anotação em Múltiplos Níveis: Sempre que um conceito intermediário exigir introdução teórica ou resumo da regra geral, inclua um bloco "anotacao".
+3. Formato da Caixa ("formato"):
+   - "quadrado": Use para explicações conceituais densas, regras, antíteses e sínteses (largura 600px).
+   - "alongado": Use para termos diretos, etimologias ou transcrição de exemplos lineares contínuos (largura 1200px).
+4. Tipo da Caixa ("tipo"):
+   - "pauta": Para escrita manual guiada com linhas horizontais.
+   - "ilustracao": Para espaço livre destinado a gráficos, vetores, esquemas anatômicos ou fórmulas volumosas.
+5. Estimativa de Volume ("palavras_estimadas"):
+   - Avalie realisticamente a quantidade de palavras manuscritas necessárias para o estudante sintetizar o tópico (mínimo de 8 palavras).
+
+RETORNE APENAS O BLOCO JSON VÁLIDO. NÃO ADICIONE NENHUM TEXTO, INTRODUÇÃO OU CONCLUSÃO.
+
+
+3.3 Explicação Técnica: Por que o Prompt Funciona
+Isolamento de Token e Parser Estrito: Modelos de linguagem frequentemente adicionam textos de cortesia antes de blocos de código. Ao estipular a saída como JSON puro sem delimitadores extras e instruir explicitamente sobre a ausência de introdução, o arquivo gerado pode ser passado diretamente pelo método JSON.parse() do JavaScript sem falhas de sintaxe.
+Previsão de Esforço Cognitivo: Instruir a IA a inferir palavras_estimadas em vez de forçar o modelo a tentar adivinhar a altura em pixels desacopla a semântica da geometria. A IA foca na complexidade pedagógica do conceito, enquanto o motor de layout local assume a responsabilidade matemática pelas coordenadas de renderização.
+4. Motor de Layout Horizontal e Geometria Anti-Colisão
+4.1 A Unidade Composta
+Diferente de árvores convencionais onde um nó é apenas um ponto ou caixa de texto, no MindNote Engine cada entidade visual é uma Unidade Composta:
+Célula de Rótulo (Título): Retângulo com bordas arredondadas que acondiciona o texto conceitual do nó.
+Conector de Adjacência: Traço horizontal direto de 30 px interligando o título à sua área de anotação correspondente.
+Célula de Escrita (Lateral): O bloco pautado ou de desenho posicionado ao lado direito imediato do título.
+4.2 Algoritmo Recursivo Bottom-Up (Reserva de Espaço Vertical)
+Para evitar que ramos adjacentes se sobreponham no eixo Y, o motor executa uma passagem pós-ordem (das folhas para a raiz), calculando a altura de ocupação de cada sub-árvore:
+Se o nó for folha, sua altura reservada $H_{ramo}$ é igual à sua própria altura total somada a um espaçamento vertical mínimo de segurança ($S_{gap} = 40\text{ px}$).
+Se o nó possuir filhos, sua altura necessária é a soma das alturas reservadas por todos os seus filhos diretos:
+H_filhos = Σ H_ramo(filho_i)
+A reserva do pai é definida por: H_ramo(pai) = max(H_propria(pai), H_filhos).
+4.3 Passagem Top-Down e Alinhamento em Colunas
+Com as reservas verticais garantidas, o motor percorre a árvore partindo da raiz para fixar as coordenadas definitivas:
+Coordenada X: Determinada pela profundidade hierárquica. O nível seguinte começa após a maior largura registrada pelo nível anterior mais uma folga horizontal de 120 px.
+Coordenada Y dos Filhos: O primeiro filho inicia no topo da área reservada pelo pai; cada irmão subsequente é empilhado logo abaixo do término da reserva do irmão anterior.
+Centralização Geométrica do Pai: O nó pai tem seu ponto central Y posicionado exatamente no ponto médio entre o primeiro e o último filho:
+Y(pai) = (Y(filho_1) + Y(filho_n)) / 2
+4.4 Geometria de Conexão com Curvas de Bézier Cúbicas
+As conexões entre a extremidade direita da Unidade Composta pai e o lado esquerdo do nó filho utilizam curvas de Bézier cúbicas contínuas. Definindo o ponto de partida $P_0(X_0, Y_0)$ e o ponto de chegada $P_3(X_3, Y_3)$, a distância horizontal é $\Delta X = X_3 - X_0$.
+Os pontos de controle que garantem a tangência perfeitamente horizontal são calculados como:
+Ponto de Controle 1: $P_1 = (X_0 + \Delta X / 2, \; Y_0)$
+Ponto de Controle 2: $P_2 = (X_3 - \Delta X / 2, \; Y_3)$
+Essa formulação matemática impede nós quebrados e inflexões verticais abruptas, mantendo a estética idêntica a softwares de diagramação profissionais.
+5. Renderização Vetorial e Exportação para PDF Nativo
+5.1 Renderização no Navegador via SVG
+A visualização antes do download é manipulada através de elementos nativos do DOM utilizando SVG (Scalable Vector Graphics). Isso viabiliza aceleração de hardware nativa no tablet e suporte a gestos multitoque (pan e pinch-to-zoom) sem latência.
+5.2 Exportação Direta com jsPDF (Sem Rasterização)
+A conversão para PDF não utiliza captura de tela ou conversão por imagem (Canvas2D/html2canvas). As coordenadas matemáticas da árvore são iteradas diretamente nas chamadas primitivas da biblioteca jsPDF:
+Bordas de Caixas: Desenhadas via doc.roundedRect(x, y, w, h, rx, ry, 'S').
+Pautas Cinzas: Desenhadas como linhas vetoriais com doc.setDrawColor(209, 213, 219) e doc.line(x1, y, x2, y).
+Conectores Curvos: Desenhados com as funções nativas de curva cúbica da biblioteca: doc.curve(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, 'S').
+5.3 Comparativo: Renderização Vetorial vs Rasterização
+Critério de Avaliação
+Método Tradicional (PNG / HTML2Canvas)
+Método MindNote (jsPDF Vetorial Direto)
+ 
+Comportamento ao Zoom Máximo
+Pixelização intensa, linhas borradas e texto ilegível.
+Nitidez infinita; traços matemáticos recalculados pela GPU.
+Tamanho do Arquivo Gerado
+Pesado (10 MB a 40 MB para mapas panorâmicos).
+Extremamente leve (entre 120 KB e 600 KB).
+Consumo de Memória no Tablet
+Alto; risco de congelamento ou crash ao alocar bitmaps imensos.
+Mínimo; execução em milissegundos na thread do navegador.
+Compatibilidade com StarNotes
+O app processa como imagem pesada de fundo.
+O app importa como folha vetorial contínua anotável nativa.
+
+6. Ambiente de Desenvolvimento e Pipeline de Build
+6.1 Estrutura de Arquivos Consolidada
+Para facilitar o desenvolvimento e a manutenção dentro do editor Acode no Android, a base de código é mantida estritamente enxuta e desacoplada:
+index.html: Arquivo unificado contendo marcação semântica, estilos CSS responsivos e a biblioteca lógica do motor em JavaScript.
+dev_server.py: Script Python nativo para rodar no Termux, servindo a aplicação localmente sem depender do Node.js.
+manifest.json: Configuração de Progressive Web App para instalação direta na tela inicial sem compilação.
+.github/workflows/build_apk.yml: Automação em nuvem para gerar o arquivo APK instalável.
+6.2 Servidor de Desenvolvimento Local (dev_server.py)
+O script abaixo atua como servidor HTTP local, injetando cabeçalhos de controle para desativar qualquer retenção de cache pelo navegador do tablet:
+import http.server
+import socketserver
+import os
+
+PORT = 8080
+DIRETORIO = os.path.dirname(os.path.abspath(__file__))
+
+class DevHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=DIRETORIO, **kwargs)
+
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
+if __name__ == "__main__":
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer(("", PORT), DevHandler) as httpd:
+        print(f"Servidor ativo em: http://localhost:{PORT}")
+        httpd.serve_forever()
+
+
+6.3 Automação de Compilação do APK via GitHub Actions
+Para evitar a necessidade de instalar ambientes pesados de desenvolvimento móvel no tablet, a compilação do APK é delegada aos servidores do GitHub Actions. O workflow abaixo compila o aplicativo e disponibiliza o binário pronto para download:
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js e Capacitor
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Inicializar Projeto Móvel
+        run: |
+          npm install
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "MindNote" "com.eduardo.mindnote" --web-dir .
+          npx cap add android
+
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Compilar APK Debug
+        run: |
+          npx cap copy android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Armazenar Binário Gerado
+        uses: actions/upload-artifact@v4
+        with:
+          name: MindNote-Instalavel
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+
+7. Guia de Implementação para o Assistente de Código (Claude)
+7.1 Especificação e Diretrizes de Entrega
+Ao solicitar que o assistente implemente ou atualize o código no GitHub ou no Acode, transmita a especificação nos seguintes termos estruturados:
+Meta: Gerar o arquivo unificado index.html contendo motor de árvore horizontal, pautas de escrita manual e exportador de PDF contínuo.
+Entrada de Dados: Painel lateral retrátil com campo <textarea> para colar o JSON do NotebookLM e seletor de escala de entrelinha (padrão de 68 px).
+Renderização em Tela: Construção de nós, caixas pautadas e curvas Bézier no interior de um elemento <svg> responsivo com overflow liberado.
+Botão de Exportação: Disparo da função jsPDF para geração do documento contínuo, sem divisão em páginas e sem conversão por imagem.
+7.2 Critérios de Aceite e Validação
+O documento PDF gerado deve manter nitidez absoluta em 800% de aproximação dentro do leitor de notas.
+Nenhuma caixa de escrita de ramo irmão pode colidir verticalmente com outra caixa, independentemente da quantidade de linhas configuradas.
+A conexão entre o título e a caixa de escrita lateral correspondente deve manter alinhamento rigorosamente horizontal.
+A folha exportada deve abrir no StarNotes sem aviso de formato corrompido, permitindo escrita imediata com caneta stylus.
+  
