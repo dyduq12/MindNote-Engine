@@ -1,0 +1,81 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  background-color: #f9fafb;
+}
+
+#painel-lateral {
+  width: 320px;
+  padding: 16px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+#painel-lateral h1 {
+  font-size: 18px;
+  margin: 0 0 8px 0;
+}
+
+#entrada-json {
+  width: 100%;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+#botao-processar {
+  padding: 10px;
+  background-color: #111827;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#botao-processar:active {
+  background-color: #374151;
+}
+
+.erro {
+  color: #b91c1c;
+  white-space: pre-wrap;
+  font-size: 12px;
+  margin: 0;
+}
+
+#area-visualizacao {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+#area-debug {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 13px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+#svg-mapa {
+  background-color: #ffffff;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+}
