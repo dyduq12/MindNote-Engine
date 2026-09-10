@@ -3,28 +3,42 @@
  * Responsabilidade final (Fase 4 - ainda nao implementada):
  * Desenhar nos, pautas e curvas de Bezier dentro do elemento <svg>.
  *
- * Nesta Fase 1, este arquivo expoe apenas a funcao de debug textual,
- * usada para validar visualmente o resultado do parser/validador
- * (js/app.js) antes de existir motor geometrico.
+ * Ate a Fase 3, este arquivo expoe a funcao de debug textual, usada
+ * para auditar o resultado do parser/validador (Fase 1) e, a partir
+ * da Fase 2, tambem as dimensoes matematicas calculadas para cada no
+ * (titulo e anotacao), antes de existir motor geometrico de posicionamento.
  */
+
+function formatarDimensoesDebug(no) {
+  if (!no.dimensoes) {
+    return '';
+  }
+
+  const t = no.dimensoes.titulo;
+  const pluralTitulo = t.linhasQuebradas > 1 ? 'linhas' : 'linha';
+  let texto = ` [Titulo: ${t.largura}x${t.altura}px (${t.linhasQuebradas} ${pluralTitulo})`;
+
+  const a = no.dimensoes.anotacao;
+  if (a) {
+    if (a.tipo === 'ilustracao') {
+      texto += ` | Ilustracao(${a.formato}): ${a.largura}x${a.altura}px]`;
+    } else {
+      const pluralAnotacao = a.linhasFinais > 1 ? 'linhas' : 'linha';
+      texto += ` | Anotacao(${a.formato}): ${a.largura}x${a.altura}px (${a.linhasFinais} ${pluralAnotacao})]`;
+    }
+  } else {
+    texto += ']';
+  }
+
+  return texto;
+}
 
 function renderDebugTextual(noRaiz, elementoDestino) {
   const linhas = [];
 
   function percorrer(no, profundidade) {
     const indentacao = '  '.repeat(profundidade);
-    let linha = `${indentacao}- ${no.titulo}`;
-
-    if (no.anotacao) {
-      if (no.anotacao.tipo === 'ilustracao') {
-        linha += ` [ilustracao/${no.anotacao.formato}, altura=${no.anotacao.alturaCustomizada}px]`;
-      } else if (no.anotacao.linhasManuais) {
-        linha += ` [pauta/${no.anotacao.formato}, linhas_manuais=${no.anotacao.linhasManuais}]`;
-      } else {
-        linha += ` [pauta/${no.anotacao.formato}, palavras_estimadas=${no.anotacao.palavrasEstimadas}]`;
-      }
-    }
-
+    const linha = `${indentacao}- ${no.titulo}${formatarDimensoesDebug(no)}`;
     linhas.push(linha);
     no.filhos.forEach((filho) => percorrer(filho, profundidade + 1));
   }

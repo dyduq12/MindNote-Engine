@@ -1,17 +1,12 @@
 /*
  * app.js
- * Orquestracao geral e Fase 1: Parser e Validacao do contrato JSON.
+ * Orquestracao geral.
  *
- * Regras de validacao aplicadas (ver documento mestre, secao 3.1,
- * e revisao critica do motor, Passo 4):
- * - "titulo" e obrigatorio em todo no.
- * - "filhos" ausente ou vazio e tratado como no folha.
- * - anotacao.tipo "ilustracao" usa SEMPRE altura_customizada
- *   (nunca entra no calculo por palavras/linhas).
- * - anotacao.linhas_manuais, quando definido e > 0, tem
- *   precedencia ABSOLUTA sobre palavras_estimadas.
- * - palavras_estimadas tem piso minimo de seguranca de 8,
- *   conforme o prompt mestre do NotebookLM.
+ * Fase 1: Parser e Validacao do contrato JSON (secao 3.1 do documento
+ * mestre e revisao critica do motor, Passo 4).
+ * Fase 2: apos validar, a arvore e enriquecida com o objeto
+ * "dimensoes" por no, via enriquecerArvoreComDimensoes (engine.text.js),
+ * usando a escala de entrelinha informada na UI (padrao 68px).
  */
 
 function normalizarAnotacao(anotacao) {
@@ -78,6 +73,7 @@ function processarJSON(textoBruto) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const textarea = document.getElementById('entrada-json');
+  const entradaEscala = document.getElementById('entrada-escala');
   const botaoProcessar = document.getElementById('botao-processar');
   const areaDebug = document.getElementById('area-debug');
   const areaErro = document.getElementById('area-erro');
@@ -88,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const arvoreValidada = processarJSON(textarea.value);
+
+      const escalaInformada = Number(entradaEscala.value);
+      const escalaEntrelinha = (Number.isFinite(escalaInformada) && escalaInformada > 0) ? escalaInformada : 68;
+
+      enriquecerArvoreComDimensoes(arvoreValidada, escalaEntrelinha);
       renderDebugTextual(arvoreValidada, areaDebug);
     } catch (erro) {
       areaErro.textContent = erro.message;

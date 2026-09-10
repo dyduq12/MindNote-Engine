@@ -13,12 +13,16 @@
   <h1>MindNote Engine</h1>
   <label for="entrada-json">Cole o JSON gerado pelo NotebookLM:</label>
   <textarea id="entrada-json" rows="14" placeholder='{"titulo": "Titulo Raiz", "filhos": []}'></textarea>
+
+  <label for="entrada-escala">Escala de entrelinha (px):</label>
+  <input type="number" id="entrada-escala" value="68" min="40" max="120" step="1">
+
   <button id="botao-processar" type="button">Processar Arvore</button>
   <pre id="area-erro" class="erro"></pre>
 </div>
 
 <div id="area-visualizacao">
-  <h2>Debug Textual da Arvore (Fase 1)</h2>
+  <h2>Debug Textual da Arvore (Fase 1 + Fase 2)</h2>
   <pre id="area-debug"></pre>
 
   <h2>Canvas Vetorial (habilitado na Fase 4)</h2>
