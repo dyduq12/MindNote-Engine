@@ -1,71 +1,12 @@
-/*
- * render.svg.js
- * Responsabilidade final (Fase 4 - ainda nao implementada):
- * Desenhar nos, pautas e curvas de Bezier dentro do elemento <svg>.
- *
- * Ate a Fase 3, este arquivo expoe a funcao de debug textual, usada
- * para auditar o resultado do parser (Fase 1), das dimensoes (Fase 2)
- * e agora das coordenadas absolutas e reserva vertical (Fase 3),
- * antes de existir renderizacao visual real.
- */
-
-function formatarDimensoesDebug(no) {
-  if (!no.dimensoes) {
-    return '';
-  }
-
-  const t = no.dimensoes.titulo;
-  const pluralTitulo = t.linhasQuebradas > 1 ? 'linhas' : 'linha';
-  let texto = ` [Titulo: ${t.largura}x${t.altura}px (${t.linhasQuebradas} ${pluralTitulo})`;
-
-  const a = no.dimensoes.anotacao;
-  if (a) {
-    if (a.tipo === 'ilustracao') {
-      texto += ` | Ilustracao(${a.formato}): ${a.largura}x${a.altura}px]`;
-    } else {
-      const pluralAnotacao = a.linhasFinais > 1 ? 'linhas' : 'linha';
-      texto += ` | Anotacao(${a.formato}): ${a.largura}x${a.altura}px (${a.linhasFinais} ${pluralAnotacao})]`;
-    }
-  } else {
-    texto += ']';
-  }
-
-  return texto;
-}
-
-function formatarPosicaoDebug(no) {
-  if (!no.posicao) {
-    return '';
-  }
-
-  const x = Math.round(no.posicao.x);
-  const y = Math.round(no.posicao.y);
-  const hRamo = Math.round(no._hRamo);
-
-  return ` [Posicao: (X=${x}, Y=${y}) | Ramo H: ${hRamo}px]`;
-}
-
-function renderDebugTextual(noRaiz, elementoDestino) {
-  const linhas = [];
-
-  if (noRaiz.canvasDimensoes) {
-    const largura = Math.round(noRaiz.canvasDimensoes.larguraTotal);
-    const altura = Math.round(noRaiz.canvasDimensoes.alturaTotal);
-    linhas.push(`Canvas Total: ${largura}x${altura}px`);
-    linhas.push('');
-  }
-
-  function percorrer(no, profundidade) {
-    const indentacao = '  '.repeat(profundidade);
-    const linha = `${indentacao}- ${no.titulo}${formatarDimensoesDebug(no)}${formatarPosicaoDebug(no)}`;
-    linhas.push(linha);
-    no.filhos.forEach((filho) => percorrer(filho, profundidade + 1));
-  }
-
-  percorrer(noRaiz, 0);
-  elementoDestino.textContent = linhas.join('\n');
-}
-
-function renderizarArvoreSVG(coordenadas, elementoSVG) {
-  throw new Error('renderizarArvoreSVG ainda nao implementado (Fase 4).');
-}
+/* Fase 4: renderizacao SVG vetorial e navegacao por pan/zoom. */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function criarElementoSVG(tag, atributos = {}) { const e = document.createElementNS(SVG_NS, tag); Object.entries(atributos).forEach(([n,v]) => e.setAttribute(n, String(v))); return e; }
+function adicionarTextoQuebrado(grupo, texto, dimensao, x, y) { const e = criarElementoSVG('text', {x,y,'text-anchor':'middle','dominant-baseline':'middle',class:'mindnote-title-text'}); const linhas = quebrarTexto(texto, dimensao.largura - 16, FONTE_PADRAO); const h = 24; const desloc = -((linhas.length - 1) * h) / 2; linhas.forEach((linha,i) => { const t = criarElementoSVG('tspan',{x,dy:i === 0 ? desloc : h}); t.textContent = linha; e.appendChild(t); }); grupo.appendChild(e); }
+function desenharTitulo(no, raiz) { const x=no.posicao.x, y=no.posicao.y-no.dimensoes.titulo.altura/2, g=criarElementoSVG('g',{class:'mindnote-title-group'}); g.appendChild(criarElementoSVG('rect',{x,y,width:no.dimensoes.titulo.largura,height:no.dimensoes.titulo.altura,rx:8,ry:8,fill:'#FFFFFF',stroke:'#374151','stroke-width':2})); adicionarTextoQuebrado(g,no.titulo,no.dimensoes.titulo,x+no.dimensoes.titulo.largura/2,no.posicao.y); raiz.appendChild(g); }
+function desenharAnotacao(no, raiz) { if (!no.dimensoes.anotacao) return; const a=no.dimensoes.anotacao,x=no.posicaoAnotacao.x,y=no.posicaoAnotacao.y-a.altura/2,g=criarElementoSVG('g',{class:'mindnote-annotation-group'}); const r={x,y,width:a.largura,height:a.altura,rx:6,ry:6,'stroke-width':a.tipo==='ilustracao'?2:1.5}; Object.assign(r,a.tipo==='ilustracao'?{fill:'url(#dot-grid)',stroke:'#6B7280'}:{fill:'#FCFCFD',stroke:'#9CA3AF','stroke-dasharray':'4,4'}); g.appendChild(criarElementoSVG('rect',r)); if(a.tipo==='pauta'){const p=40, escala=a.altura/(a.linhasFinais||1); for(let i=1;i<=a.linhasFinais;i++){const ly=y+p+i*escala;if(ly<y+a.altura-p)g.appendChild(criarElementoSVG('line',{x1:x+p,y1:ly,x2:x+a.largura-p,y2:ly,stroke:'#D1D5DB','stroke-width':1}));}} raiz.appendChild(g); }
+function desenharConectorAnotacao(no, raiz) { if (!no.conectorAnotacao) return; const l=no.conectorAnotacao; raiz.appendChild(criarElementoSVG('line',{x1:l.x1,y1:l.y1,x2:l.x2,y2:l.y2,stroke:'#9CA3AF','stroke-width':2})); }
+function desenharConectoresFilhos(no, raiz) { no.conectoresFilhos.forEach(k=>{const c=k.curva,d=`M ${c.p0.x},${c.p0.y} C ${c.p1.x},${c.p1.y} ${c.p2.x},${c.p2.y} ${c.p3.x},${c.p3.y}`; raiz.appendChild(criarElementoSVG('path',{d,stroke:'#9CA3AF','stroke-width':2.5,fill:'none','stroke-linecap':'round'}));}); }
+function percorrerArvore(no, cb) { cb(no); no.filhos.forEach(f=>percorrerArvore(f,cb)); }
+function criarDefsSVG(svg) { const defs=criarElementoSVG('defs'), p=criarElementoSVG('pattern',{id:'dot-grid',width:24,height:24,patternUnits:'userSpaceOnUse'}); p.appendChild(criarElementoSVG('circle',{cx:3,cy:3,r:1.5,fill:'#E5E7EB'})); defs.appendChild(p); const s=criarElementoSVG('style'); s.textContent='.mindnote-title-text{font:16px system-ui,sans-serif;fill:#111827}svg{shape-rendering:geometricPrecision;touch-action:none;user-select:none}'; defs.appendChild(s); svg.appendChild(defs); }
+function criarInteracaoViewport(svg, grupo, dims) { const st={v:{x:0,y:0,width:dims.larguraTotal,height:dims.alturaTotal},ini:{width:dims.larguraTotal,height:dims.alturaTotal},p:new Map(),d:null,vi:null}; const aplicar=()=>svg.setAttribute('viewBox',`${st.v.x} ${st.v.y} ${st.v.width} ${st.v.height}`); const limitar=()=>{const v=st.v,mx=v.width*.75,my=v.height*.75;v.x=Math.max(-mx,Math.min(dims.larguraTotal-v.width+mx,v.x));v.y=Math.max(-my,Math.min(dims.alturaTotal-v.height+my,v.y));}; const ponto=e=>{const r=svg.getBoundingClientRect(),sx=st.v.width/r.width,sy=st.v.height/r.height;return{x:st.v.x+(e.clientX-r.left)*sx,y:st.v.y+(e.clientY-r.top)*sy};}; const dist=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); const centro=(a,b)=>({clientX:(a.clientX+b.clientX)/2,clientY:(a.clientY+b.clientY)/2}); const zoom=(f,c)=>{const antes=ponto(c);st.v.width=Math.max(160,Math.min(st.ini.width*4,st.v.width*f));st.v.height=Math.max(160,Math.min(st.ini.height*4,st.v.height*f));const depois=ponto(c);st.v.x+=antes.x-depois.x;st.v.y+=antes.y-depois.y;limitar();aplicar();}; svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId);st.p.set(e.pointerId,e);if(st.p.size===2){const [a,b]=[...st.p.values()];st.d=dist(a,b);st.vi={...st.v};}}); svg.addEventListener('pointermove',e=>{if(!st.p.has(e.pointerId))return;const ant=st.p.get(e.pointerId);st.p.set(e.pointerId,e);if(st.p.size===1){const a=ponto(e),b=ponto(ant);st.v.x+=b.x-a.x;st.v.y+=b.y-a.y;limitar();aplicar();return;}const [a,b]=[...st.p.values()];if(st.d){st.v={...st.vi};aplicar();zoom(st.d/dist(a,b),centro(a,b));}}); const liberar=e=>{st.p.delete(e.pointerId);if(st.p.size<2){st.d=null;st.vi=null;}}; svg.addEventListener('pointerup',liberar);svg.addEventListener('pointercancel',liberar);svg.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?1.1:.9,e);},{passive:false}); aplicar(); }
+function renderizarArvoreSVG(arvore, container) { container.textContent=''; const d=arvore.canvasDimensoes,svg=criarElementoSVG('svg',{id:'svg-mapa',width:'100%',height:'100%',viewBox:`0 0 ${d.larguraTotal} ${d.alturaTotal}`,preserveAspectRatio:'xMinYMin meet'});criarDefsSVG(svg);const g=criarElementoSVG('g',{id:'viewport-root'});svg.appendChild(g);percorrerArvore(arvore,no=>{desenharConectoresFilhos(no,g);desenharConectorAnotacao(no,g);});percorrerArvore(arvore,no=>{desenharAnotacao(no,g);desenharTitulo(no,g);});container.appendChild(svg);criarInteracaoViewport(svg,g,d);return svg;}
