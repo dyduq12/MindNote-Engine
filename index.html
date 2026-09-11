@@ -1,1 +1,33 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MindNote Engine</title><link rel="manifest" href="manifest.json"><link rel="stylesheet" href="css/style.css"></head><body><div id="painel-lateral"><div id="cabecalho-painel"><h1>MindNote Engine</h1><button id="botao-tema" type="button">Tema: Claro</button></div><label for="entrada-json">Cole o JSON (objeto raiz ou lista de raizes):</label><textarea id="entrada-json" rows="14" placeholder='{"titulo":"Titulo Raiz","filhos":[]} ou [{"titulo":"Arvore 1"},{"titulo":"Arvore 2"}]'></textarea><label for="entrada-escala">Escala de entrelinha (px):</label><input type="number" id="entrada-escala" value="26" min="10" max="120" step="1"><button id="botao-processar" type="button">Processar Arvore</button><pre id="area-erro" class="erro"></pre></div><main id="canvas-container" aria-label="Mapa mental SVG"></main><script src="js/engine.text.js"></script><script src="js/engine.geometry.js"></script><script src="js/render.svg.js"></script><script src="js/render.pdf.js"></script><script src="js/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindNote Engine</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="painel-lateral">
+    <div id="cabecalho-painel">
+      <h1>MindNote Engine</h1>
+      <div class="acoes-cabecalho">
+        <button id="botao-tema" type="button">Tema: Claro</button>
+        <button id="botao-nova-raiz" type="button">+ Nova Raiz</button>
+      </div>
+    </div>
+    <label for="entrada-json">Cole o JSON — objeto raiz ou lista de raízes:</label>
+    <textarea id="entrada-json" rows="14" placeholder='{"titulo":"Título Raiz","filhos":[]} ou [{"titulo":"Árvore 1"},{"titulo":"Árvore 2"}]'></textarea>
+    <label for="entrada-escala">Escala de entrelinha (px):</label>
+    <input type="number" id="entrada-escala" value="26" min="10" max="120" step="1">
+    <button id="botao-processar" type="button">Processar Árvore</button>
+    <pre id="area-erro" class="erro"></pre>
+  </div>
+  <main id="canvas-container" aria-label="Mapa mental SVG"></main>
+  <script src="js/engine.text.js"></script>
+  <script src="js/engine.geometry.js"></script>
+  <script src="js/render.svg.js"></script>
+  <script src="js/render.pdf.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
