@@ -1,1 +1,116 @@
-*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f9fafb;transition:background-color .2s ease}body{display:flex;flex-direction:row}#painel-lateral{z-index:2;display:flex;flex:0 0 320px;flex-direction:column;gap:8px;width:320px;padding:16px;overflow-y:auto;color:#111827;background:#fff;border-right:1px solid #e5e7eb;transition:background-color .2s ease,border-color .2s ease,color .2s ease}#cabecalho-painel{display:flex;align-items:center;justify-content:space-between;gap:8px}#painel-lateral h1{margin:0;font-size:18px}.acoes-cabecalho{display:flex;align-items:center;gap:6px}#botao-tema,#botao-nova-raiz{min-height:36px;padding:6px 10px;font-size:12px;font-weight:500;line-height:1.2;color:#111827;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;white-space:nowrap}#botao-tema:active,#botao-nova-raiz:active{background:#e5e7eb}#entrada-json{width:100%;padding:8px;font-family:monospace;font-size:12px;color:#111827;background:#fff;border:1px solid #d1d5db;border-radius:6px;resize:vertical}#entrada-escala{width:100%;padding:8px;color:#111827;background:#fff;border:1px solid #d1d5db;border-radius:6px}#botao-processar{min-height:40px;padding:10px;color:#fff;font-size:14px;background:#111827;border:0;border-radius:6px;cursor:pointer}#botao-processar:active{background:#374151}.erro{margin:0;color:#b91c1c;font-size:12px;white-space:pre-wrap}#canvas-container{flex:1 1 auto;min-width:0;min-height:0;height:100vh;overflow:hidden;background:#f3f4f6;transition:background-color .2s ease}#canvas-container>svg{display:block;width:100%;height:100%}#micro-toolbar{pointer-events:auto;filter:drop-shadow(0 2px 4px rgb(0 0 0 / .25))}.micro-toolbar-button{cursor:pointer}.micro-toolbar-button rect{fill:#2563EB;stroke:#1D4ED8;stroke-width:1}.micro-toolbar-button text{fill:#fff;font:600 12px system-ui,sans-serif;pointer-events:none}.mindnote-selected{stroke:#2563EB!important;stroke-width:2.5!important}.mindnote-resize-handle{fill:#2563EB;cursor:ns-resize;pointer-events:auto}.mindnote-resize-handle:hover{fill:#1D4ED8}body.tema-escuro{color:#f4f4f5;background:#18181b}body.tema-escuro #painel-lateral{color:#f4f4f5;background:#27272a;border-color:#52525b}body.tema-escuro #entrada-json,body.tema-escuro #entrada-escala{color:#f4f4f5;background:#18181b;border-color:#52525b}body.tema-escuro #botao-tema,body.tema-escuro #botao-nova-raiz{color:#f4f4f5;background:#3f3f46;border-color:#52525b}body.tema-escuro #botao-tema:active,body.tema-escuro #botao-nova-raiz:active{background:#52525b}body.tema-escuro #botao-processar{color:#18181b;background:#f4f4f5}body.tema-escuro #botao-processar:active{background:#d4d4d8}body.tema-escuro #canvas-container{background:#18181b}
+/* ── Reset base ───────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #f9fafb; transition: background-color .2s ease; }
+body { display: flex; flex-direction: row; }
+
+/* ── Painel lateral ───────────────────────────────────────────────────────── */
+#painel-lateral {
+  z-index: 2;
+  display: flex; flex: 0 0 320px; flex-direction: column;
+  gap: 8px; width: 320px; padding: 16px; overflow-y: auto;
+  color: #111827; background: #fff;
+  border-right: 1px solid #e5e7eb;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+#cabecalho-painel { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#painel-lateral h1 { margin: 0; font-size: 18px; }
+.acoes-cabecalho { display: flex; align-items: center; gap: 6px; }
+
+/* Botões do cabeçalho */
+#botao-tema, #botao-nova-raiz {
+  min-height: 36px; padding: 6px 10px;
+  font-size: 12px; font-weight: 500; line-height: 1.2;
+  color: #111827; background: #f3f4f6;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  cursor: pointer; white-space: nowrap;
+}
+#botao-tema:active, #botao-nova-raiz:active { background: #e5e7eb; }
+
+/* Inputs */
+#entrada-json {
+  width: 100%; padding: 8px;
+  font-family: monospace; font-size: 12px;
+  color: #111827; background: #fff;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  resize: vertical;
+}
+#entrada-escala {
+  width: 100%; padding: 8px;
+  color: #111827; background: #fff;
+  border: 1px solid #d1d5db; border-radius: 6px;
+}
+
+/* Botão processar */
+#botao-processar {
+  min-height: 40px; padding: 10px;
+  color: #fff; font-size: 14px;
+  background: #111827; border: 0; border-radius: 6px; cursor: pointer;
+}
+#botao-processar:active { background: #374151; }
+
+/* Área de erro */
+.erro { margin: 0; color: #b91c1c; font-size: 12px; white-space: pre-wrap; }
+
+/* ── Canvas ───────────────────────────────────────────────────────────────── */
+#canvas-container {
+  flex: 1 1 auto; min-width: 0; min-height: 0; height: 100vh;
+  overflow: hidden; background: #f3f4f6;
+  transition: background-color .2s ease;
+}
+#canvas-container > svg { display: block; width: 100%; height: 100%; }
+
+/* ── Micro-toolbar ────────────────────────────────────────────────────────── */
+#micro-toolbar {
+  pointer-events: auto;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / .30));
+}
+.micro-toolbar-button { cursor: pointer; }
+.micro-toolbar-button rect {
+  fill: #2563EB; stroke: #1D4ED8; stroke-width: 1;
+  transition: fill .12s ease;
+}
+.micro-toolbar-button:hover rect  { fill: #1D4ED8; }
+.micro-toolbar-button:active rect { fill: #1E40AF; }
+.micro-toolbar-button text {
+  fill: #fff;
+  font: 600 12px system-ui, sans-serif;
+  pointer-events: none;
+}
+
+/* ── Seleção ──────────────────────────────────────────────────────────────── */
+.mindnote-selected {
+  stroke: #2563EB !important;
+  stroke-width: 2.5 !important;
+  /* Anel de foco visível sem alterar geometria */
+  filter: drop-shadow(0 0 4px rgb(37 99 235 / .55));
+}
+
+/* ── Handle de resize ─────────────────────────────────────────────────────── */
+.mindnote-handle.mindnote-resize-handle {
+  fill: #2563EB;
+  cursor: ns-resize;
+  pointer-events: auto;
+  /* Alvo de toque generoso para stylus */
+  paint-order: stroke fill;
+  stroke: transparent;
+  stroke-width: 12;   /* aumenta área de toque sem alterar visual */
+}
+.mindnote-handle.mindnote-resize-handle:hover  { fill: #1D4ED8; }
+.mindnote-handle.mindnote-resize-handle:active { fill: #1E40AF; }
+
+/* ── Cursores contextuais ─────────────────────────────────────────────────── */
+.mindnote-node { cursor: pointer; }
+.mindnote-box  { cursor: pointer; }
+
+/* ── Tema escuro ──────────────────────────────────────────────────────────── */
+body.tema-escuro { color: #f4f4f5; background: #18181b; }
+body.tema-escuro #painel-lateral { color: #f4f4f5; background: #27272a; border-color: #52525b; }
+body.tema-escuro #entrada-json,
+body.tema-escuro #entrada-escala   { color: #f4f4f5; background: #18181b; border-color: #52525b; }
+body.tema-escuro #botao-tema,
+body.tema-escuro #botao-nova-raiz  { color: #f4f4f5; background: #3f3f46; border-color: #52525b; }
+body.tema-escuro #botao-tema:active,
+body.tema-escuro #botao-nova-raiz:active { background: #52525b; }
+body.tema-escuro #botao-processar         { color: #18181b; background: #f4f4f5; }
+body.tema-escuro #botao-processar:active  { background: #d4d4d8; }
+body.tema-escuro #canvas-container        { background: #18181b; }
