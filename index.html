@@ -6,26 +6,56 @@
   <title>MindNote Engine</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-  <div id="painel-lateral">
-    <div id="cabecalho-painel">
-      <h1>MindNote Engine</h1>
-      <div class="acoes-cabecalho">
-        <button id="botao-tema" type="button">Tema: Claro</button>
-        <button id="botao-nova-raiz" type="button">+ Nova Raiz</button>
-      </div>
+
+  <section id="view-home" class="view-screen">
+    <header class="home-header">
+      <h1>Meus Mapas</h1>
+    </header>
+
+    <div id="home-estado-vazio" class="home-estado-vazio">
+      <p>Você ainda não tem mapas salvos.</p>
+      <p>Toque no botão “+” para criar o primeiro.</p>
     </div>
-    <label for="entrada-json">Cole o JSON — objeto raiz ou lista de raízes:</label>
-    <textarea id="entrada-json" rows="14" placeholder='{"titulo":"Título Raiz","filhos":[]} ou [{"titulo":"Árvore 1"},{"titulo":"Árvore 2"}]'></textarea>
-    <label for="entrada-escala">Escala de entrelinha (px):</label>
-    <input type="number" id="entrada-escala" value="26" min="10" max="120" step="1">
-    <button id="botao-processar" type="button">Processar Árvore</button>
-    <!-- Etapa 6.1: botão de exportação PDF -->
-    <button id="botao-exportar-pdf" type="button">Exportar para StarNotes (PDF)</button>
-    <pre id="area-erro" class="erro"></pre>
-  </div>
-  <main id="canvas-container" aria-label="Mapa mental SVG"></main>
+
+    <div id="home-grade-cartoes" class="home-grade-cartoes"></div>
+
+    <div class="home-botao-flutuante-container">
+      <div id="home-menu-novo" class="home-menu-novo">
+        <button id="home-opcao-criar-zero" type="button" class="home-menu-novo-item">Criar do Zero</button>
+        <button id="home-opcao-importar" type="button" class="home-menu-novo-item">Importar JSON</button>
+      </div>
+      <button id="home-botao-novo" type="button" class="home-botao-flutuante" aria-label="Novo mapa">+</button>
+    </div>
+  </section>
+
+  <section id="view-editor" class="view-screen" style="display: none;">
+    <div id="painel-lateral">
+      <button id="botao-voltar-home" type="button" class="botao-voltar-home">← Meus Mapas</button>
+      <div id="cabecalho-painel">
+        <h1>MindNote Engine</h1>
+        <div class="acoes-cabecalho">
+          <button id="botao-tema" type="button">Tema: Claro</button>
+          <button id="botao-nova-raiz" type="button">+ Nova Raiz</button>
+        </div>
+      </div>
+      <label for="entrada-json">Cole o JSON — objeto raiz ou lista de raízes:</label>
+      <textarea id="entrada-json" rows="14" placeholder='{"titulo":"Título Raiz","filhos":[]} ou [{"titulo":"Árvore 1"},{"titulo":"Árvore 2"}]'></textarea>
+      <label for="entrada-escala">Escala de entrelinha (px):</label>
+      <input type="number" id="entrada-escala" value="26" min="10" max="120" step="1">
+      <button id="botao-processar" type="button">Processar Árvore</button>
+      <!-- Etapa 6.1: botão de exportação PDF -->
+      <button id="botao-exportar-pdf" type="button">Exportar para StarNotes (PDF)</button>
+      <p id="indicador-autosave" class="indicador-autosave"></p>
+      <pre id="area-erro" class="erro"></pre>
+    </div>
+    <main id="canvas-container" aria-label="Mapa mental SVG"></main>
+  </section>
+
+  <!-- Fase 2 (v2.0): camada de persistência local — não depende de nenhum outro script -->
+  <script src="js/db.js"></script>
   <!-- Biblioteca jsPDF local (vendor) — deve vir antes dos scripts da engine -->
   <script src="js/vendor/jspdf.umd.min.js"></script>
   <script src="js/engine.text.js"></script>
@@ -35,6 +65,9 @@
   <!-- Fase 1 (v2.0): sanitizador anti-conversa + diagnóstico visual de erro — devem vir antes de app.js -->
   <script src="js/parser.sanitizer.js"></script>
   <script src="js/parser.diagnostics.js"></script>
+  <!-- Fase 2 (v2.0): roteador SPA e Home Dashboard — devem vir antes de app.js -->
+  <script src="js/app.router.js"></script>
+  <script src="js/home.dashboard.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

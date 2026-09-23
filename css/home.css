@@ -1,0 +1,238 @@
+/* css/home.css — Fase 2 (v2.0)
+ * Estilos da Home Dashboard, do roteador de views e da transição de
+ * telas. Não altera nenhuma regra de css/style.css — apenas adiciona.
+ */
+
+/* ── Roteador de views ──────────────────────────────────────────────── */
+.view-screen {
+  width: 100%;
+  height: 100vh;
+  opacity: 1;
+  filter: blur(0px);
+  transition: opacity 220ms ease, filter 220ms ease;
+}
+.view-screen.view-saindo,
+.view-screen.view-entrando {
+  opacity: 0;
+  filter: blur(12px);
+}
+#view-editor {
+  display: flex;
+  flex-direction: row;
+}
+#view-home {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #f9fafb;
+  padding: 24px 32px 96px;
+  box-sizing: border-box;
+}
+body.tema-escuro #view-home { background: #18181b; color: #f4f4f5; }
+
+/* ── Cabeçalho da Home ────────────────────────────────────────── */
+.home-header { margin-bottom: 20px; }
+.home-header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+
+/* ── Estado vazio ──────────────────────────────────────────────── */
+.home-estado-vazio {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  color: #6b7280;
+  text-align: center;
+}
+body.tema-escuro .home-estado-vazio { color: #a1a1aa; }
+
+/* ── Grade de cartões ───────────────────────────────────────────── */
+.home-grade-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.home-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+.home-card:hover {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.10);
+  transform: translateY(-2px);
+}
+body.tema-escuro .home-card {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+.home-card-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.home-card-thumb svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.home-card-thumb-vazio {
+  font-size: 12px;
+  color: #9ca3af;
+}
+body.tema-escuro .home-card-thumb { background: #18181b; }
+
+.home-card-corpo { padding: 12px 14px 14px; }
+.home-card-titulo {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-card-data { margin: 0; font-size: 12px; color: #6b7280; }
+body.tema-escuro .home-card-titulo { color: #f4f4f5; }
+body.tema-escuro .home-card-data { color: #a1a1aa; }
+
+.home-card-menu-botao {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  color: #111827;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+body.tema-escuro .home-card-menu-botao {
+  background: rgb(24 24 27 / 0.85);
+  color: #f4f4f5;
+}
+
+.home-card-menu {
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  z-index: 5;
+  display: none;
+  flex-direction: column;
+  min-width: 150px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  overflow: hidden;
+}
+body.tema-escuro .home-card-menu {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+.home-card-menu-item {
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  color: #111827;
+  cursor: pointer;
+}
+.home-card-menu-item:hover { background: #f3f4f6; }
+.home-card-menu-item-perigo { color: #b91c1c; }
+body.tema-escuro .home-card-menu-item { color: #f4f4f5; }
+body.tema-escuro .home-card-menu-item:hover { background: #3f3f46; }
+
+/* ── Botão flutuante (+) ───────────────────────────────────────────── */
+.home-botao-flutuante-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 10;
+}
+.home-botao-flutuante {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.25);
+}
+body.tema-escuro .home-botao-flutuante { background: #f4f4f5; color: #18181b; }
+
+.home-menu-novo {
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  overflow: hidden;
+}
+body.tema-escuro .home-menu-novo { background: #27272a; }
+.home-menu-novo-item {
+  padding: 12px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+}
+.home-menu-novo-item:hover { background: #f3f4f6; }
+body.tema-escuro .home-menu-novo-item { color: #f4f4f5; }
+body.tema-escuro .home-menu-novo-item:hover { background: #3f3f46; }
+
+/* ── Editor: botão de voltar e indicador de autosave ───────────── */
+.botao-voltar-home {
+  align-self: flex-start;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #111827;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.botao-voltar-home:active { background: #e5e7eb; }
+body.tema-escuro .botao-voltar-home {
+  color: #f4f4f5;
+  background: #3f3f46;
+  border-color: #52525b;
+}
+
+.indicador-autosave {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #059669;
+  min-height: 14px;
+}
+body.tema-escuro .indicador-autosave { color: #34d399; }

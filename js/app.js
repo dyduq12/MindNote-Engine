@@ -4,6 +4,12 @@ const MindNoteApp = window.MindNoteApp || {};
 let arvoresAtuais = null;
 let temaAtual = "claro";
 
+// ─── Fase 2 (v2.0): identidade do mapa aberto no editor (persistência) ─────
+let mapaAtualId = null;
+let mapaAtualTitulo = "Novo Mapa";
+let autosaveTimeoutId = null;
+const AUTOSAVE_DELAY_MS = 1200;
+
 // ─── Paleta de cores de destaque ──────────────────────────────────────────
 const CORES_RAMO = [null, "#2563EB", "#059669", "#D97706", "#7C3AED", "#DC2626"];
 
@@ -144,9 +150,62 @@ function garantirArvoresAtuais() {
     throw new Error("Nenhuma árvore foi carregada. Processe um JSON primeiro.");
 }
 
+// ─── Fase 2 (v2.0): persistência automática (autosave) ──────────────
+// Gera uma miniatura SVG leve a partir do <svg> vivo do canvas, removendo
+// apenas elementos de interação (toolbar/handles) que não fazem sentido numa
+// prévia estática. Não recalcula nenhuma coordenada — clona o que o motor
+// geométrico já desenhou.
+function gerarThumbnailSVG() {
+  const svgOriginal = document.querySelector("#canvas-container svg");
+  if (!svgOriginal) return null;
+  const clone = svgOriginal.cloneNode(true);
+  clone
+    .querySelectorAll("#micro-toolbar, .mindnote-resize-handle, .mindnote-selected")
+    .forEach((elemento) => elemento.remove());
+  clone.removeAttribute("width");
+  clone.removeAttribute("height");
+  clone.setAttribute("width", "100%");
+  clone.setAttribute("height", "100%");
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function obterTituloMapaAtual() {
+  if (Array.isArray(arvoresAtuais) && arvoresAtuais[0]?.titulo) {
+    return arvoresAtuais[0].titulo;
+  }
+  return mapaAtualTitulo || "Novo Mapa";
+}
+
+function atualizarIndicadorAutosave() {
+  const indicador = document.getElementById("indicador-autosave");
+  if (!indicador) return;
+  const agora = new Date();
+  const hh = String(agora.getHours()).padStart(2, "0");
+  const mm = String(agora.getMinutes()).padStart(2, "0");
+  indicador.textContent = `● Salvo às ${hh}:${mm}`;
+}
+
+function salvarNoBancoAgora() {
+  if (!mapaAtualId || !window.MindNoteDB || !Array.isArray(arvoresAtuais)) return;
+  const svgString = gerarThumbnailSVG();
+  const titulo = obterTituloMapaAtual();
+  mapaAtualTitulo = titulo;
+  window.MindNoteDB
+    .salvarMapa(mapaAtualId, titulo, arvoresAtuais, svgString, temaAtual)
+    .then(atualizarIndicadorAutosave)
+    .catch((erro) => console.error("Falha ao salvar mapa:", erro));
+}
+
+function agendarAutosave() {
+  if (!mapaAtualId) return;
+  if (autosaveTimeoutId) window.clearTimeout(autosaveTimeoutId);
+  autosaveTimeoutId = window.setTimeout(salvarNoBancoAgora, AUTOSAVE_DELAY_MS);
+}
+
 function finalizarMutacao() {
   reprocessarERenderizar();
   sincronizarEstadoParaTextarea();
+  agendarAutosave();
 }
 
 // ─── Mutações ────────────────────────────────────────────────────────────────
@@ -243,6 +302,7 @@ function atualizarTitulo(no, novoTexto) {
   no.titulo = titulo;
   reprocessarERenderizar();
   sincronizarEstadoParaTextarea();
+  agendarAutosave();
   return true;
 }
 
@@ -254,7 +314,78 @@ function alternarCor(no) {
   no.cor = CORES_RAMO[(baseIndice + 1) % CORES_RAMO.length];
   reprocessarERenderizar();
   sincronizarEstadoParaTextarea();
+  agendarAutosave();
   return true;
+}
+
+// ─── Fase 2 (v2.0): ciclo de vida do mapa dentro do editor ───────────
+// Chamado pelo roteador ao entrar na view do editor. Se `id` corresponder a
+// um mapa já salvo, carrega seus dados; caso contrário, inicializa um mapa
+// em branco com aquele id (permitindo que o autosave o persista já na
+// primeira mutação).
+async function inicializarComMapa(id) {
+  mapaAtualId = id || window.MindNoteDB?.gerarUUID?.() || null;
+
+  const indicador = document.getElementById("indicador-autosave");
+  if (indicador) indicador.textContent = "";
+  const areaErroEl = document.getElementById("area-erro");
+  if (areaErroEl) areaErroEl.textContent = "";
+
+  if (id && window.MindNoteDB) {
+    try {
+      const registro = await window.MindNoteDB.carregarMapa(id);
+      if (registro) {
+        arvoresAtuais = registro.arvores;
+        mapaAtualTitulo = registro.meta.titulo;
+        temaAtual = registro.meta.tema === "escuro" ? "escuro" : "claro";
+        aplicarTemaNaInterface();
+        reprocessarERenderizar();
+        sincronizarEstadoParaTextarea();
+        const botaoExportarEl = document.getElementById("botao-exportar-pdf");
+        if (botaoExportarEl) botaoExportarEl.disabled = false;
+        return;
+      }
+    } catch (erro) {
+      console.error("Falha ao carregar mapa:", erro);
+    }
+  }
+
+  // Mapa novo em branco (id ainda não existe em maps_meta)
+  arvoresAtuais = [{ titulo: "Novo Tema", anotacao: null, cor: null, filhos: [] }];
+  mapaAtualTitulo = "Novo Tema";
+  reprocessarERenderizar();
+  sincronizarEstadoParaTextarea();
+  const botaoExportarEl = document.getElementById("botao-exportar-pdf");
+  if (botaoExportarEl) botaoExportarEl.disabled = false;
+  agendarAutosave();
+}
+
+// Usado pela Home ao importar JSON: aplica o texto já sanitizado no mapa
+// recém-criado, reaproveitando o mesmo parser e o mesmo diagnóstico de erro
+// do fluxo manual do editor.
+function importarJSONBruto(jsonTexto) {
+  const textarea = document.getElementById("entrada-json");
+  if (textarea) textarea.value = jsonTexto;
+  try {
+    arvoresAtuais = processarJSON(jsonTexto);
+    reprocessarERenderizar();
+    sincronizarEstadoParaTextarea();
+    const botaoExportarEl = document.getElementById("botao-exportar-pdf");
+    if (botaoExportarEl) botaoExportarEl.disabled = false;
+    agendarAutosave();
+  } catch (erro) {
+    const areaErroEl = document.getElementById("area-erro");
+    if (areaErroEl) areaErroEl.textContent = erro.message;
+  }
+}
+
+function aplicarTemaNaInterface() {
+  definirTema(temaAtual);
+  document.body.classList.toggle("tema-escuro", temaAtual === "escuro");
+  const botaoTema = document.getElementById("botao-tema");
+  if (botaoTema) {
+    botaoTema.textContent = temaAtual === "claro" ? "Tema: Claro" : "Tema: Escuro";
+  }
 }
 
 // ─── Exposição pública ─────────────────────────────────────────────────────────────────
@@ -270,6 +401,8 @@ Object.assign(MindNoteApp, {
   alternarCor,
   sincronizarEstadoParaTextarea,
   reprocessarERenderizar,
+  inicializarComMapa,
+  importarJSONBruto,
 });
 window.MindNoteApp = MindNoteApp;
 
@@ -282,6 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const botaoNovaRaiz   = document.getElementById("botao-nova-raiz");
   const botaoExportar   = document.getElementById("botao-exportar-pdf");
   const areaErro        = document.getElementById("area-erro");
+  const botaoVoltarHome = document.getElementById("botao-voltar-home");
 
   botaoExportar.disabled = true;
 
@@ -334,6 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
       arvoresAtuais = processarJSON(jsonParaProcessar);
       reprocessarERenderizar();
       botaoExportar.disabled = false;
+      agendarAutosave();
     } catch (erro) {
       const diagnostico = window.ParserDiagnostics
         ? window.ParserDiagnostics.diagnosticarErroJSON(jsonParaProcessar, erro)
@@ -350,6 +485,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       reprocessarERenderizar();
       sincronizarEstadoParaTextarea();
+      agendarAutosave();
     } catch (erro) {
       areaErro.textContent = erro.message;
     }
@@ -357,11 +493,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   botaoTema.addEventListener("click", () => {
     temaAtual = temaAtual === "claro" ? "escuro" : "claro";
-    definirTema(temaAtual);
-    document.body.classList.toggle("tema-escuro", temaAtual === "escuro");
-    botaoTema.textContent =
-      temaAtual === "claro" ? "Tema: Claro" : "Tema: Escuro";
+    aplicarTemaNaInterface();
     reprocessarERenderizar();
+    agendarAutosave();
   });
 
   botaoNovaRaiz.addEventListener("click", () => {
@@ -370,6 +504,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (erro) {
       areaErro.textContent = erro.message;
     }
+  });
+
+  // ─── Fase 2 (v2.0): retorno seguro à Home ──────────────────────
+  botaoVoltarHome?.addEventListener("click", () => {
+    salvarNoBancoAgora();
+    window.MindNoteRouter?.navegarPara("home");
   });
 
   // ─── Listener de exportação PDF — repassa temaAtual ─────────────────────
