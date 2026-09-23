@@ -59,7 +59,6 @@ function validarNo(no, profundidade = 0) {
       `Nó inválido na profundidade ${profundidade}: campo "titulo" ausente ou vazio.`
     );
   }
-  // Preserva `cor` se já existir; inicializa como null se ausente
   const cor =
     typeof no.cor === "string" && CORES_RAMO.includes(no.cor)
       ? no.cor
@@ -236,7 +235,7 @@ function adicionarNovaRaiz() {
   return novaRaiz;
 }
 
-// ─── NOVO: Edição de título ───────────────────────────────────────────────────
+// ─── Edição de título ─────────────────────────────────────────────────────────
 function atualizarTitulo(no, novoTexto) {
   if (!no || typeof novoTexto !== "string") return false;
   const titulo = novoTexto.trim();
@@ -247,12 +246,13 @@ function atualizarTitulo(no, novoTexto) {
   return true;
 }
 
-// ─── NOVO: Alternância cíclica de cor ────────────────────────────────────────
+// ─── Alternância cíclica de cor ───────────────────────────────────────────────
 function alternarCor(no) {
   if (!no) return false;
   const indiceAtual = CORES_RAMO.indexOf(no.cor !== undefined ? no.cor : null);
-  const proximoIndice = (indiceAtual + 1) % CORES_RAMO.length;
-  no.cor = CORES_RAMO[proximoIndice];
+  // Se indexOf retornar -1 (cor fora da paleta), força o índice para 0
+  const baseIndice = indiceAtual === -1 ? 0 : indiceAtual;
+  no.cor = CORES_RAMO[(baseIndice + 1) % CORES_RAMO.length];
   reprocessarERenderizar();
   sincronizarEstadoParaTextarea();
   return true;
@@ -276,20 +276,27 @@ window.MindNoteApp = MindNoteApp;
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  const textarea     = document.getElementById("entrada-json");
-  const entradaEscala = document.getElementById("entrada-escala");
-  const botaoProcessar = document.getElementById("botao-processar");
-  const botaoTema    = document.getElementById("botao-tema");
-  const botaoNovaRaiz = document.getElementById("botao-nova-raiz");
-  const areaErro     = document.getElementById("area-erro");
+  const textarea        = document.getElementById("entrada-json");
+  const entradaEscala   = document.getElementById("entrada-escala");
+  const botaoProcessar  = document.getElementById("botao-processar");
+  const botaoTema       = document.getElementById("botao-tema");
+  const botaoNovaRaiz   = document.getElementById("botao-nova-raiz");
+  const botaoExportar   = document.getElementById("botao-exportar-pdf");
+  const areaErro        = document.getElementById("area-erro");
+
+  // O botão de exportação começa desabilitado até haver uma árvore processada
+  botaoExportar.disabled = true;
 
   botaoProcessar.addEventListener("click", () => {
     areaErro.textContent = "";
     try {
       arvoresAtuais = processarJSON(textarea.value);
       reprocessarERenderizar();
+      // Habilita exportação após processamento bem-sucedido
+      botaoExportar.disabled = false;
     } catch (erro) {
       areaErro.textContent = erro.message;
+      botaoExportar.disabled = true;
     }
   });
 
@@ -317,6 +324,26 @@ document.addEventListener("DOMContentLoaded", () => {
       MindNoteApp.adicionarNovaRaiz();
     } catch (erro) {
       areaErro.textContent = erro.message;
+    }
+  });
+
+  // ─── Etapa 6.1: listener de exportação PDF ─────────────────────────────
+  botaoExportar.addEventListener("click", () => {
+    areaErro.textContent = "";
+    // Guarda de estado: não dispara sem árvore com coordenadas calculadas
+    if (
+      !Array.isArray(arvoresAtuais) ||
+      arvoresAtuais.length === 0 ||
+      !arvoresAtuais[0].canvasDimensoes
+    ) {
+      areaErro.textContent =
+        "Processe um JSON antes de exportar.";
+      return;
+    }
+    try {
+      exportarPDFContinuo(arvoresAtuais);
+    } catch (erro) {
+      areaErro.textContent = `Erro na exportação: ${erro.message}`;
     }
   });
 });
