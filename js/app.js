@@ -4,10 +4,10 @@ const MindNoteApp = window.MindNoteApp || {};
 let arvoresAtuais = null;
 let temaAtual = "claro";
 
-// ─── Paleta de cores de destaque ────────────────────────────────────────────
+// ─── Paleta de cores de destaque ──────────────────────────────────────────
 const CORES_RAMO = [null, "#2563EB", "#059669", "#D97706", "#7C3AED", "#DC2626"];
 
-// ─── Normalização ────────────────────────────────────────────────────────────
+// ─── Normalização ───────────────────────────────────────────────────────────────
 function normalizarAnexo(anexo) {
   if (!anexo) return null;
   const alturaValida =
@@ -93,7 +93,7 @@ function obterEscalaEntrelinha() {
   return Number.isFinite(valor) && valor > 0 ? valor : 26;
 }
 
-// ─── Ciclo principal ─────────────────────────────────────────────────────────
+// ─── Ciclo principal ───────────────────────────────────────────────────────
 function reprocessarERenderizar() {
   if (!Array.isArray(arvoresAtuais) || arvoresAtuais.length === 0) return;
   arvoresAtuais.forEach((raiz) =>
@@ -235,7 +235,7 @@ function adicionarNovaRaiz() {
   return novaRaiz;
 }
 
-// ─── Edição de título ─────────────────────────────────────────────────────────
+// ─── Edição de título ───────────────────────────────────────────────────────────
 function atualizarTitulo(no, novoTexto) {
   if (!no || typeof novoTexto !== "string") return false;
   const titulo = novoTexto.trim();
@@ -246,7 +246,7 @@ function atualizarTitulo(no, novoTexto) {
   return true;
 }
 
-// ─── Alternância cíclica de cor ───────────────────────────────────────────────
+// ─── Alternância cíclica de cor ──────────────────────────────────────────────────
 function alternarCor(no) {
   if (!no) return false;
   const indiceAtual = CORES_RAMO.indexOf(no.cor !== undefined ? no.cor : null);
@@ -257,7 +257,7 @@ function alternarCor(no) {
   return true;
 }
 
-// ─── Exposição pública ────────────────────────────────────────────────────────
+// ─── Exposição pública ─────────────────────────────────────────────────────────────────
 Object.assign(MindNoteApp, {
   adicionarFilho,
   adicionarAnotacao,
@@ -273,7 +273,7 @@ Object.assign(MindNoteApp, {
 });
 window.MindNoteApp = MindNoteApp;
 
-// ─── Bootstrap ───────────────────────────────────────────────────────────────
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   const textarea        = document.getElementById("entrada-json");
   const entradaEscala   = document.getElementById("entrada-escala");
@@ -285,14 +285,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
   botaoExportar.disabled = true;
 
+  // ─── Fase 1 (v2.0): sanitização de entrada + diagnóstico visual de erro ────
+  // Passa o texto colado pelo sanitizador ANTES do JSON.parse. Se o
+  // sanitizador ou o diagnóstico não estiverem carregados por algum motivo,
+  // cai de volta para o comportamento original (texto bruto direto ao
+  // parser), preservando 100% a compatibilidade com o fluxo consolidado.
   botaoProcessar.addEventListener("click", () => {
     areaErro.textContent = "";
+    const textoBruto = textarea.value;
+
+    const resultadoSanitizacao = window.ParserSanitizer
+      ? window.ParserSanitizer.sanitizarEntradaJSON(textoBruto)
+      : { status: "unico", jsonTexto: textoBruto };
+
+    let jsonParaProcessar = textoBruto;
+
+    if (resultadoSanitizacao.status === "vazio") {
+      areaErro.textContent =
+        "Nenhum bloco JSON foi encontrado no texto colado.";
+      botaoExportar.disabled = true;
+      return;
+    }
+
+    if (resultadoSanitizacao.status === "multiplo") {
+      const candidatos = resultadoSanitizacao.candidatos;
+      const listaTitulos = candidatos
+        .map((c, i) => `${i + 1}. ${c.titulo}`)
+        .join("\n");
+      const escolha = window.prompt(
+        `Foram identificados ${candidatos.length} mapas. Qual deseja carregar?\n\n${listaTitulos}\n\nDigite o número:`,
+        "1"
+      );
+      const indice = Number(escolha) - 1;
+      if (
+        !Number.isInteger(indice) ||
+        indice < 0 ||
+        indice >= candidatos.length
+      ) {
+        areaErro.textContent = "Nenhum mapa selecionado.";
+        return;
+      }
+      jsonParaProcessar = candidatos[indice].jsonTexto;
+    } else {
+      jsonParaProcessar = resultadoSanitizacao.jsonTexto;
+    }
+
     try {
-      arvoresAtuais = processarJSON(textarea.value);
+      arvoresAtuais = processarJSON(jsonParaProcessar);
       reprocessarERenderizar();
       botaoExportar.disabled = false;
     } catch (erro) {
-      areaErro.textContent = erro.message;
+      const diagnostico = window.ParserDiagnostics
+        ? window.ParserDiagnostics.diagnosticarErroJSON(jsonParaProcessar, erro)
+        : null;
+      areaErro.textContent = diagnostico
+        ? diagnostico.textoSnippet
+        : erro.message;
       botaoExportar.disabled = true;
     }
   });
@@ -324,7 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ─── Listener de exportação PDF — repassa temaAtual ──────────────────────
+  // ─── Listener de exportação PDF — repassa temaAtual ─────────────────────
   botaoExportar.addEventListener("click", () => {
     areaErro.textContent = "";
     if (
