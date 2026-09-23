@@ -89,12 +89,22 @@ function construirDock() {
   return dock;
 }
 
+// ─── Fase 3.2 (fix): o dock é ancorado em #view-editor, e não em
+// #canvas-container. O container do canvas é limpo via `container.textContent
+// = ''` a cada chamada de renderizarArvoreSVG() (js/render.svg.js), o que
+// destruía o dock a cada mutação/reprocessamento. #view-editor nunca é
+// esvaziado pelo motor de renderização, então o dock sobrevive a qualquer
+// redraw do SVG.
 function inicializar() {
-  if (dockElemento) return dockElemento;
-  const container = document.getElementById("canvas-container");
-  if (!container) return null;
+  const editor = document.getElementById("view-editor");
+  if (!editor) return null;
+  const existente = document.getElementById("zoom-dock");
+  if (existente) {
+    dockElemento = existente;
+    return dockElemento;
+  }
   dockElemento = construirDock();
-  container.appendChild(dockElemento);
+  editor.appendChild(dockElemento);
   return dockElemento;
 }
 
