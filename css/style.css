@@ -1,16 +1,15 @@
 /* ── Reset base ───────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #f9fafb; transition: background-color .2s ease; }
-body { display: flex; flex-direction: row; }
 
 /* ── Painel lateral ───────────────────────────────────────────────────────── */
 #painel-lateral {
-  z-index: 2;
-  display: flex; flex: 0 0 320px; flex-direction: column;
-  gap: 8px; width: 320px; padding: 16px; overflow-y: auto;
-  color: #111827; background: #fff;
-  border-right: 1px solid #e5e7eb;
-  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+z-index: 2;
+display: flex; flex: 0 0 320px; flex-direction: column;
+gap: 8px; width: 320px; padding: 16px; overflow-y: auto;
+color: #111827; background: #fff;
+border-right: 1px solid #e5e7eb;
+transition: background-color .2s ease, border-color .2s ease, color .2s ease;
 }
 #cabecalho-painel { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #painel-lateral h1 { margin: 0; font-size: 18px; }
@@ -18,48 +17,48 @@ body { display: flex; flex-direction: row; }
 
 /* Botões do cabeçalho */
 #botao-tema, #botao-nova-raiz {
-  min-height: 36px; padding: 6px 10px;
-  font-size: 12px; font-weight: 500; line-height: 1.2;
-  color: #111827; background: #f3f4f6;
-  border: 1px solid #d1d5db; border-radius: 6px;
-  cursor: pointer; white-space: nowrap;
+min-height: 36px; padding: 6px 10px;
+font-size: 12px; font-weight: 500; line-height: 1.2;
+color: #111827; background: #f3f4f6;
+border: 1px solid #d1d5db; border-radius: 6px;
+cursor: pointer; white-space: nowrap;
 }
 #botao-tema:active, #botao-nova-raiz:active { background: #e5e7eb; }
 
 /* Inputs */
 #entrada-json {
-  width: 100%; padding: 8px;
-  font-family: monospace; font-size: 12px;
-  color: #111827; background: #fff;
-  border: 1px solid #d1d5db; border-radius: 6px;
-  resize: vertical;
+width: 100%; padding: 8px;
+font-family: monospace; font-size: 12px;
+color: #111827; background: #fff;
+border: 1px solid #d1d5db; border-radius: 6px;
+resize: vertical;
 }
 #entrada-escala {
-  width: 100%; padding: 8px;
-  color: #111827; background: #fff;
-  border: 1px solid #d1d5db; border-radius: 6px;
+width: 100%; padding: 8px;
+color: #111827; background: #fff;
+border: 1px solid #d1d5db; border-radius: 6px;
 }
 
 /* Botão processar */
 #botao-processar {
-  min-height: 40px; padding: 10px;
-  color: #fff; font-size: 14px;
-  background: #111827; border: 0; border-radius: 6px; cursor: pointer;
+min-height: 40px; padding: 10px;
+color: #fff; font-size: 14px;
+background: #111827; border: 0; border-radius: 6px; cursor: pointer;
 }
 #botao-processar:active { background: #374151; }
 
 /* ── Botão exportar PDF (Etapa 6.1) ──────────────────────────────────────── */
 #botao-exportar-pdf {
-  min-height: 40px; padding: 10px;
-  color: #fff; font-size: 14px; font-weight: 600;
-  background: #059669; border: 0; border-radius: 6px; cursor: pointer;
-  transition: background .15s ease;
+min-height: 40px; padding: 10px;
+color: #fff; font-size: 14px; font-weight: 600;
+background: #059669; border: 0; border-radius: 6px; cursor: pointer;
+transition: background .15s ease;
 }
-#botao-exportar-pdf:hover  { background: #047857; }
+#botao-exportar-pdf:hover { background: #047857; }
 #botao-exportar-pdf:active { background: #065f46; }
 /* Estado desabilitado (enquanto não há árvore processada) */
 #botao-exportar-pdf:disabled {
-  background: #6ee7b7; cursor: not-allowed; opacity: .65;
+background: #6ee7b7; cursor: not-allowed; opacity: .65;
 }
 
 /* Área de erro */
@@ -67,68 +66,101 @@ body { display: flex; flex-direction: row; }
 
 /* ── Canvas ───────────────────────────────────────────────────────────────── */
 #canvas-container {
-  flex: 1 1 auto; min-width: 0; min-height: 0; height: 100vh;
-  overflow: hidden; background: #f3f4f6;
-  transition: background-color .2s ease;
+flex: 1 1 auto; min-width: 0; min-height: 0; height: 100vh;
+overflow: hidden; background: #f3f4f6;
+transition: background-color .2s ease;
 }
 #canvas-container > svg { display: block; width: 100%; height: 100%; }
 
 /* ── Micro-toolbar ────────────────────────────────────────────────────────── */
 #micro-toolbar {
-  pointer-events: auto;
-  filter: drop-shadow(0 2px 6px rgb(0 0 0 / .30));
+pointer-events: auto;
+filter: drop-shadow(0 2px 6px rgb(0 0 0 / .30));
 }
 .micro-toolbar-button { cursor: pointer; }
 .micro-toolbar-button rect {
-  fill: #2563EB; stroke: #1D4ED8; stroke-width: 1;
-  transition: fill .12s ease;
+fill: #2563EB; stroke: #1D4ED8; stroke-width: 1;
+transition: fill .12s ease;
 }
-.micro-toolbar-button:hover rect  { fill: #1D4ED8; }
+.micro-toolbar-button:hover rect { fill: #1D4ED8; }
 .micro-toolbar-button:active rect { fill: #1E40AF; }
 .micro-toolbar-button text {
-  fill: #fff;
-  font: 600 12px system-ui, sans-serif;
-  pointer-events: none;
+fill: #fff;
+font: 600 12px system-ui, sans-serif;
+pointer-events: none;
 }
 
 /* ── Seleção ──────────────────────────────────────────────────────────────── */
 .mindnote-selected {
-  stroke: #2563EB !important;
-  stroke-width: 2.5 !important;
-  filter: drop-shadow(0 0 4px rgb(37 99 235 / .55));
+stroke: #2563EB !important;
+stroke-width: 2.5 !important;
+filter: drop-shadow(0 0 4px rgb(37 99 235 / .55));
 }
 
 /* ── Handle de resize ─────────────────────────────────────────────────────── */
 .mindnote-handle.mindnote-resize-handle {
-  fill: #2563EB;
-  cursor: ns-resize;
-  pointer-events: auto;
-  touch-action: none;        /* impede scroll do SO antes de setPointerCapture */
-  paint-order: stroke fill;
-  stroke: transparent;
-  stroke-width: 12;
+fill: #2563EB;
+cursor: ns-resize;
+pointer-events: auto;
+touch-action: none; /* impede scroll do SO antes de setPointerCapture */
+paint-order: stroke fill;
+stroke: transparent;
+stroke-width: 12;
 }
-.mindnote-handle.mindnote-resize-handle:hover  { fill: #1D4ED8; }
+.mindnote-handle.mindnote-resize-handle:hover { fill: #1D4ED8; }
 .mindnote-handle.mindnote-resize-handle:active { fill: #1E40AF; }
 
 /* ── Cursores contextuais ─────────────────────────────────────────────────── */
 .mindnote-node { cursor: pointer; }
-.mindnote-box  { cursor: pointer; }
+.mindnote-box { cursor: pointer; }
 
 /* ── Tema escuro ──────────────────────────────────────────────────────────── */
 body.tema-escuro { color: #f4f4f5; background: #18181b; }
 body.tema-escuro #painel-lateral { color: #f4f4f5; background: #27272a; border-color: #52525b; }
 body.tema-escuro #entrada-json,
-body.tema-escuro #entrada-escala   { color: #f4f4f5; background: #18181b; border-color: #52525b; }
+body.tema-escuro #entrada-escala { color: #f4f4f5; background: #18181b; border-color: #52525b; }
 body.tema-escuro #botao-tema,
-body.tema-escuro #botao-nova-raiz  { color: #f4f4f5; background: #3f3f46; border-color: #52525b; }
+body.tema-escuro #botao-nova-raiz { color: #f4f4f5; background: #3f3f46; border-color: #52525b; }
 body.tema-escuro #botao-tema:active,
 body.tema-escuro #botao-nova-raiz:active { background: #52525b; }
-body.tema-escuro #botao-processar         { color: #18181b; background: #f4f4f5; }
-body.tema-escuro #botao-processar:active  { background: #d4d4d8; }
-body.tema-escuro #canvas-container        { background: #18181b; }
+body.tema-escuro #botao-processar { color: #18181b; background: #f4f4f5; }
+body.tema-escuro #botao-processar:active { background: #d4d4d8; }
+body.tema-escuro #canvas-container { background: #18181b; }
 /* Botão de exportação PDF no tema escuro */
-body.tema-escuro #botao-exportar-pdf         { background: #059669; }
-body.tema-escuro #botao-exportar-pdf:hover   { background: #047857; }
-body.tema-escuro #botao-exportar-pdf:active  { background: #065f46; }
+body.tema-escuro #botao-exportar-pdf { background: #059669; }
+body.tema-escuro #botao-exportar-pdf:hover { background: #047857; }
+body.tema-escuro #botao-exportar-pdf:active { background: #065f46; }
 body.tema-escuro #botao-exportar-pdf:disabled { background: #064e3b; opacity: .55; }
+
+/* ── Fase 3 (v2.0): estabilização de câmera, Zoom Dock e hit-testing ────────── */
+#view-editor { display: flex; flex-direction: row; width: 100%; height: 100%; }
+#canvas-container { position: relative; }
+
+#canvas-container.modo-estudo #micro-toolbar,
+#canvas-container.modo-estudo .mindnote-resize-handle,
+#canvas-container.modo-estudo .mindnote-selected { display: none !important; }
+#canvas-container.modo-estudo .mindnote-node,
+#canvas-container.modo-estudo .mindnote-box { pointer-events: none; }
+
+#zoom-dock {
+position: absolute; bottom: 20px; right: 20px; z-index: 20;
+display: flex; gap: 6px; padding: 6px;
+background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+border-radius: 14px; border: 1px solid rgba(0,0,0,0.08);
+box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+body.tema-escuro #zoom-dock { background: rgba(24,24,27,0.85); border-color: rgba(255,255,255,0.1); }
+
+.zoom-dock-btn {
+min-width: 36px; height: 36px; border: 0; border-radius: 10px;
+background: #f3f4f6; color: #111827; font-weight: 600; cursor: pointer;
+transition: background 120ms ease, transform 80ms ease;
+}
+.zoom-dock-btn:hover { background: #e5e7eb; }
+.zoom-dock-btn:active { transform: scale(0.96); }
+.zoom-dock-btn.ativo { background: #059669; color: #fff; }
+body.tema-escuro .zoom-dock-btn { background: #3f3f46; color: #f4f4f5; }
+body.tema-escuro .zoom-dock-btn:hover { background: #52525b; }
+body.tema-escuro .zoom-dock-btn.ativo { background: #047857; }
+
+.mindnote-hitbox { pointer-events: all; stroke: transparent; stroke-width: 14; cursor: pointer; fill: none; }
