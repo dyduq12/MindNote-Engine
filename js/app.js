@@ -250,7 +250,6 @@ function atualizarTitulo(no, novoTexto) {
 function alternarCor(no) {
   if (!no) return false;
   const indiceAtual = CORES_RAMO.indexOf(no.cor !== undefined ? no.cor : null);
-  // Se indexOf retornar -1 (cor fora da paleta), força o índice para 0
   const baseIndice = indiceAtual === -1 ? 0 : indiceAtual;
   no.cor = CORES_RAMO[(baseIndice + 1) % CORES_RAMO.length];
   reprocessarERenderizar();
@@ -284,7 +283,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const botaoExportar   = document.getElementById("botao-exportar-pdf");
   const areaErro        = document.getElementById("area-erro");
 
-  // O botão de exportação começa desabilitado até haver uma árvore processada
   botaoExportar.disabled = true;
 
   botaoProcessar.addEventListener("click", () => {
@@ -292,7 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       arvoresAtuais = processarJSON(textarea.value);
       reprocessarERenderizar();
-      // Habilita exportação após processamento bem-sucedido
       botaoExportar.disabled = false;
     } catch (erro) {
       areaErro.textContent = erro.message;
@@ -327,21 +324,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ─── Etapa 6.1: listener de exportação PDF ─────────────────────────────
+  // ─── Listener de exportação PDF — repassa temaAtual ──────────────────────
   botaoExportar.addEventListener("click", () => {
     areaErro.textContent = "";
-    // Guarda de estado: não dispara sem árvore com coordenadas calculadas
     if (
       !Array.isArray(arvoresAtuais) ||
       arvoresAtuais.length === 0 ||
-      !arvoresAtuais[0].canvasDimensoes
+      !arvoresAtuais[0].posicao          // verifica coordenadas calculadas
     ) {
-      areaErro.textContent =
-        "Processe um JSON antes de exportar.";
+      areaErro.textContent = "Processe um JSON antes de exportar.";
       return;
     }
     try {
-      exportarPDFContinuo(arvoresAtuais);
+      exportarPDFContinuo(arvoresAtuais, temaAtual);   // ← tema repassado
     } catch (erro) {
       areaErro.textContent = `Erro na exportação: ${erro.message}`;
     }
