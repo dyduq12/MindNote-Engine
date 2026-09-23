@@ -1,0 +1,59 @@
+{
+  "titulo": "Fixture de Regressao - MindNote Engine QA",
+  "cor": null,
+  "anotacao": null,
+  "filhos": [
+    {
+      "titulo": "No com anotacao pautada de 4 linhas",
+      "cor": null,
+      "anotacao": {
+        "tipo": "pauta",
+        "linhas_manuais": 4
+      },
+      "filhos": []
+    },
+    {
+      "titulo": "No com anotacao pautada de 5 linhas e anexo de ilustracao",
+      "cor": null,
+      "anotacao": {
+        "tipo": "pauta",
+        "linhas_manuais": 5,
+        "anexo": {
+          "altura": 220
+        }
+      },
+      "filhos": [
+        {
+          "titulo": "Subno sem anotacao (caso degenerado)",
+          "cor": null,
+          "anotacao": null,
+          "filhos": []
+        },
+        {
+          "titulo": "Subno com cor de ramo definida",
+          "cor": "#2563EB",
+          "anotacao": {
+            "tipo": "pauta",
+            "linhas_manuais": 3
+          },
+          "filhos": []
+        }
+      ]
+    },
+    {
+      "titulo": "No apenas com ilustracao (sem pauta de linhas)",
+      "cor": null,
+      "anotacao": {
+        "tipo": "ilustracao",
+        "altura_customizada": 260
+      },
+      "filhos": []
+    },
+    {
+      "titulo": "No sem anotacao e sem filhos (folha simples)",
+      "cor": null,
+      "anotacao": null,
+      "filhos": []
+    }
+  ]
+}
