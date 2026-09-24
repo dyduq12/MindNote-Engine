@@ -7,21 +7,18 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
-
   <section id="view-home" class="view-screen">
     <header class="home-header">
       <h1>Meus Mapas</h1>
     </header>
-
     <div id="home-estado-vazio" class="home-estado-vazio">
       <p>Você ainda não tem mapas salvos.</p>
       <p>Toque no botão “+” para criar o primeiro.</p>
     </div>
-
     <div id="home-grade-cartoes" class="home-grade-cartoes"></div>
-
     <div class="home-botao-flutuante-container">
       <div id="home-menu-novo" class="home-menu-novo">
         <button id="home-opcao-criar-zero" type="button" class="home-menu-novo-item">Criar do Zero</button>
@@ -71,6 +68,7 @@
   <!-- Fase 3 (v2.0): estabilização de câmera e Zoom Dock — devem vir antes de app.js -->
   <script src="js/canvas.camera.js"></script>
   <script src="js/canvas.zoomdock.js"></script>
+  <script src="js/ui.performance.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
