@@ -163,4 +163,4 @@ body.tema-escuro .zoom-dock-btn { background: #3f3f46; color: #f4f4f5; }
 body.tema-escuro .zoom-dock-btn:hover { background: #52525b; }
 body.tema-escuro .zoom-dock-btn.ativo { background: #047857; }
 
-.mindnote-hitbox { pointer-events: all; stroke: transparent; stroke-width: 14; cursor: pointer; fill: none; }
+.mindnote-hitbox { pointer-events: all !important; stroke: transparent; stroke-width: 14; cursor: pointer; fill: transparent !important; }

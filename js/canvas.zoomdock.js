@@ -35,13 +35,18 @@ function aplicarZoomComFator(fator) {
 
 function escalaReal() {
   const svg = obterSVGAtivo();
-  if (!svg) return false;
-  const canvasDimensoes = window.MindNoteApp?.obterArvoresAtuais?.()?.[0]?.canvasDimensoes;
-  if (!canvasDimensoes) return false;
-  const rect = svg.getBoundingClientRect();
-  if (!rect.width || !rect.height) return false;
-  svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
-  return true;
+  if (!svg || !svg.viewBox || !svg.viewBox.baseVal) return false;
+  // Fase 3.3 (fix): preserva o centro da visão atual em vez de saltar
+  // para a origem (0,0) do canvas.
+  const vb = svg.viewBox.baseVal;
+  const container = document.getElementById("canvas-container");
+  const w = (container && container.clientWidth) || vb.width;
+  const h = (container && container.clientHeight) || vb.height;
+  if (!w || !h) return false;
+  const cx = vb.x + vb.width / 2;
+  const cy = vb.y + vb.height / 2;
+  const novoEstado = { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
+  return window.MindNoteCamera?.restaurarEstado(svg, novoEstado) || false;
 }
 
 function enquadramentoTotal() {

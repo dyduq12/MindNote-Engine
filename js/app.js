@@ -328,6 +328,48 @@ agendarAutosave();
 return true;
 }
 
+// ─── Fase 3.3 (fix): exclusão de nó ─────────────────────────────
+function removerNo(noAlvo) {
+if (!noAlvo) return;
+// Se for raiz
+const indiceRaiz = arvoresAtuais.indexOf(noAlvo);
+if (indiceRaiz !== -1) {
+if (arvoresAtuais.length <= 1) {
+alert("Não é possível remover a única raiz do mapa mental.");
+return;
+}
+if (confirm(`Deseja realmente excluir a raiz "${noAlvo.titulo}" e todos os seus ramos?`)) {
+arvoresAtuais.splice(indiceRaiz, 1);
+reprocessarERenderizar();
+sincronizarEstadoParaTextarea();
+agendarAutosave();
+}
+return;
+}
+// Se for nó filho (busca recursiva do pai)
+function buscarPai(noAtual) {
+for (const f of noAtual.filhos || []) {
+if (f === noAlvo) return noAtual;
+const achou = buscarPai(f);
+if (achou) return achou;
+}
+return null;
+}
+let pai = null;
+for (const r of arvoresAtuais) {
+pai = buscarPai(r);
+if (pai) break;
+}
+if (pai) {
+if (confirm(`Deseja excluir o tópico "${noAlvo.titulo}"?`)) {
+pai.filhos = pai.filhos.filter(f => f !== noAlvo);
+reprocessarERenderizar();
+sincronizarEstadoParaTextarea();
+agendarAutosave();
+}
+}
+}
+
 // ─── Fase 2 (v2.0): ciclo de vida do mapa dentro do editor ───────────
 // Chamado pelo roteador ao entrar na view do editor. Se `id` corresponder a
 // um mapa já salvo, carrega seus dados; caso contrário, inicializa um mapa
@@ -418,6 +460,8 @@ window.MindNoteApp = MindNoteApp;
 // ─── Fase 3 (v2.0): getter público para módulos satélites (Zoom Dock) ──────
 // Nunca exponha `arvoresAtuais` diretamente no window — apenas via este getter.
 window.MindNoteApp.obterArvoresAtuais = () => arvoresAtuais;
+// ─── Fase 3.3 (fix): exposição da exclusão de nó ────────────────────
+window.MindNoteApp.removerNo = removerNo;
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {

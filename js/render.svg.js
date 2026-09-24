@@ -32,7 +32,7 @@ function percorrerArvore(no, cb) {
 // ─── Estado de interação ─────────────────────────────────────────────────────
 let selecaoAtual = null;
 let toolbarAtual = null;
-let resizeState   = null;   // estado do drag-to-resize
+let resizeState = null;                 // estado do drag-to-resize
 
 // ─── Hit-testing: decide se o alvo pertence a um elemento interativo ─────────
 // O listener de navegação do SVG NUNCA captura o pointer se esta função retornar true.
@@ -79,6 +79,8 @@ function exibirToolbar(no, tipo, elemento, pos) {
     // ── NOVO: botão de cor ────────────────────────────────────────────────
     acoes.push(['🎨', () => window.MindNoteApp?.alternarCor(no)]);
     if (!no.anotacao) acoes.push(['+A', () => window.MindNoteApp?.adicionarAnotacao(no)]);
+    // ── NOVO (Fase 3.3): botão de excluir nó ──────────────────────────────
+    acoes.push(['🗑️', () => window.MindNoteApp?.removerNo(no)]);
   } else {
     if (no.anotacao?.tipo === 'pauta') {
       acoes.push(['+',  () => window.MindNoteApp?.alterarLinhas(no,  1)]);
@@ -86,7 +88,7 @@ function exibirToolbar(no, tipo, elemento, pos) {
     }
     acoes.push(['Tipo', () => window.MindNoteApp?.alternarTipoAnotacao(no)]);
     if (!no.anotacao?.anexo) acoes.push(['+An', () => window.MindNoteApp?.adicionarAnexo(no)]);
-    acoes.push(['🗑',   () => window.MindNoteApp?.removerAnotacao(no)]);
+    acoes.push(['🗑',  () => window.MindNoteApp?.removerAnotacao(no)]);
   }
 
   acoes.forEach((item, i) => {
@@ -125,7 +127,7 @@ function converterParaEspacoSVG(svg, cx, cy) {
 }
 
 function iniciarResize(no, anexo, handle, e, svg) {
-  e.stopPropagation();    // não inicia pan
+  e.stopPropagation();                  // não inicia pan
   e.preventDefault();
   handle.setPointerCapture(e.pointerId);
   const pontoInicial = converterParaEspacoSVG(svg, e.clientX, e.clientY);
@@ -138,7 +140,7 @@ function iniciarResize(no, anexo, handle, e, svg) {
 function moverResize(e) {
   if (!resizeState || e.pointerId !== resizeState.pointerId) return;
   const pontoAtual = converterParaEspacoSVG(resizeState.svg, e.clientX, e.clientY);
-  const deltaY     = pontoAtual.y - resizeState.pontoInicial.y;
+  const deltaY = pontoAtual.y - resizeState.pontoInicial.y;
   const novaAltura = Math.max(120, Math.round(resizeState.alturaInicial + deltaY));
   if (resizeState.anexo) resizeState.no.anotacao.anexo.altura = novaAltura;
   else                   resizeState.no.anotacao.alturaCustomizada = novaAltura;
@@ -186,6 +188,7 @@ function caixa(no, pos, d, g, anexo, svg) {
     stroke: d.tipo === 'ilustracao' ? t.ilustracao : t.anotacaoBorda,
     'stroke-width': d.tipo === 'ilustracao' ? 2 : 1.5,
     class: 'mindnote-box',
+    'pointer-events': 'all',   // Fase 3.3 (fix): garante clique em toda a área interna
   });
   if (d.tipo !== 'ilustracao') r.setAttribute('stroke-dasharray', '4,4');
 
@@ -197,8 +200,8 @@ function caixa(no, pos, d, g, anexo, svg) {
   g.appendChild(r);
 
   if (d.tipo === 'pauta') {
-    const pv   = d.paddingVertical  || 16;
-    const ph   = d.paddingHorizontal || 20;
+    const pv = d.paddingVertical || 16;
+    const ph = d.paddingHorizontal || 20;
     const step = d.entrelinha || 26;
     for (let i = 1; i <= d.linhasFinais; i++) {
       const ly = y + pv + i * step;
@@ -220,7 +223,7 @@ function criarInteracaoViewport(svg, root, d) {
     viewBox: { x: 0, y: 0, width: d.larguraTotal, height: d.alturaTotal },
     inicial: { width: d.larguraTotal, height: d.alturaTotal },
     pointers: new Map(),
-    distanciaAnterior: null,    // ← incremental; NÃO é mais um viewBox congelado
+    distanciaAnterior: null,            // ← incremental; NÃO é mais um viewBox congelado
   };
 
   const aplicar = () => {
@@ -229,11 +232,11 @@ function criarInteracaoViewport(svg, root, d) {
   };
 
   const limitar = () => {
-    const v  = estado.viewBox;
-    const mx = v.width  * 0.75;
+    const v = estado.viewBox;
+    const mx = v.width * 0.75;
     const my = v.height * 0.75;
-    v.x = Math.max(-mx, Math.min(d.larguraTotal - v.width  + mx, v.x));
-    v.y = Math.max(-my, Math.min(d.alturaTotal  - v.height + my, v.y));
+    v.x = Math.max(-mx, Math.min(d.larguraTotal - v.width + mx, v.x));
+    v.y = Math.max(-my, Math.min(d.alturaTotal - v.height + my, v.y));
   };
 
   // Converte coordenadas CSS → espaço SVG (respeita zoom e translação)
@@ -246,7 +249,7 @@ function criarInteracaoViewport(svg, root, d) {
   const centro    = (a, b) => ({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
 
   const aplicarZoom = (fator, centroEvt) => {
-    const antes  = pontoSVG(centroEvt);
+    const antes = pontoSVG(centroEvt);
     estado.viewBox.width  = Math.max(160, Math.min(estado.inicial.width  * 4, estado.viewBox.width  * fator));
     estado.viewBox.height = Math.max(160, Math.min(estado.inicial.height * 4, estado.viewBox.height * fator));
     const depois = pontoSVG(centroEvt);
@@ -259,6 +262,17 @@ function criarInteracaoViewport(svg, root, d) {
   // ── pointerdown: captura APENAS se o alvo NÃO for elemento interativo ──────
   svg.addEventListener('pointerdown', e => {
     if (ehElementoInterativo(e.target)) return;   // NUNCA capturar sobre nó/caixa/handle/toolbar
+    // Fase 3.3 (fix): resincroniza o estado interno de pan/zoom com o viewBox
+    // real do DOM antes de iniciar qualquer gesto. Corrige o "tick" que
+    // ocorria quando o viewBox era alterado externamente (MindNoteCamera,
+    // Zoom Dock) sem que este closure soubesse.
+    const vbAtual = svg.viewBox && svg.viewBox.baseVal;
+    if (vbAtual && vbAtual.width > 0 && vbAtual.height > 0) {
+      estado.viewBox.x = vbAtual.x;
+      estado.viewBox.y = vbAtual.y;
+      estado.viewBox.width = vbAtual.width;
+      estado.viewBox.height = vbAtual.height;
+    }
     svg.setPointerCapture(e.pointerId);
     estado.pointers.set(e.pointerId, e);
     // Segundo dedo: inicializa distância incremental
@@ -282,9 +296,9 @@ function criarInteracaoViewport(svg, root, d) {
 
     if (estado.pointers.size === 1) {
       // Pan: delta em espaço SVG usando CTM inverso nos dois pontos
-      const inv    = svg.getScreenCTM().inverse();
-      const antes  = new DOMPoint(anterior.clientX, anterior.clientY).matrixTransform(inv);
-      const atual  = new DOMPoint(e.clientX,        e.clientY       ).matrixTransform(inv);
+      const inv = svg.getScreenCTM().inverse();
+      const antes = new DOMPoint(anterior.clientX, anterior.clientY).matrixTransform(inv);
+      const atual = new DOMPoint(e.clientX,        e.clientY       ).matrixTransform(inv);
       estado.viewBox.x += antes.x - atual.x;
       estado.viewBox.y += antes.y - atual.y;
       limitar();
@@ -312,7 +326,7 @@ function criarInteracaoViewport(svg, root, d) {
     // Ao soltar qualquer dedo do pinch, reinicializa distância
     if (estado.pointers.size < 2) estado.distanciaAnterior = null;
   };
-  svg.addEventListener('pointerup',     liberar);
+  svg.addEventListener('pointerup', liberar);
   svg.addEventListener('pointercancel', liberar);
 
   // ── wheel: zoom com roda do mouse ─────────────────────────────────────────
@@ -339,7 +353,7 @@ function renderizarArvoreSVG(arvores, container) {
 
   // Defs: dot-grid + estilos embutidos
   const defs = el('defs');
-  const pat  = el('pattern', { id: 'dot-grid', width: 24, height: 24, patternUnits: 'userSpaceOnUse' });
+  const pat = el('pattern', { id: 'dot-grid', width: 24, height: 24, patternUnits: 'userSpaceOnUse' });
   pat.appendChild(el('circle', { cx: 3, cy: 3, r: 1.5, fill: t.grid }));
   defs.appendChild(pat);
   const st = el('style');
@@ -387,10 +401,10 @@ function renderizarArvoreSVG(arvores, container) {
 
   // ── 2ª passagem: nós (pílulas + caixas) ──────────────────────────────────
   arvores.forEach(a => percorrerArvore(a, no => {
-    const dT  = no.dimensoes.titulo;
-    const g   = el('g');
-    const px  = no.posicao.x;
-    const py  = no.posicao.y;
+    const dT = no.dimensoes.titulo;
+    const g  = el('g');
+    const px = no.posicao.x;
+    const py = no.posicao.y;
 
     // Cor de borda da pílula: usa no.cor se definido
     const bordaPilula = no.cor || t.borda;
@@ -403,6 +417,7 @@ function renderizarArvoreSVG(arvores, container) {
       stroke: bordaPilula,
       'stroke-width': no.cor ? 2.5 : 2,   // borda ligeiramente mais grossa quando colorida
       class: 'mindnote-node',
+      'pointer-events': 'all',   // Fase 3.3 (fix): garante clique em toda a área interna
     });
 
     // ── Duplo clique na pílula: renomear título ───────────────────────────
