@@ -117,6 +117,10 @@ renderizarArvoreSVG(arvoresAtuais, container);
 const svgNovo = container.querySelector("svg");
 if (estadoAntesDoRedraw && svgNovo) {
 window.MindNoteCamera?.restaurarEstado(svgNovo, estadoAntesDoRedraw);
+// Fase 3.4 (fix): sincroniza o cache interno de pan/zoom do novo SVG com
+// o viewBox recém-restaurado, para que o próximo gesto do usuário parta
+// do estado correto e não do padrão calculado por criarInteracaoViewport.
+svgNovo._sincronizarCamera?.();
 }
 }
 

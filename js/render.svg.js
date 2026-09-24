@@ -192,7 +192,12 @@ function caixa(no, pos, d, g, anexo, svg) {
   });
   if (d.tipo !== 'ilustracao') r.setAttribute('stroke-dasharray', '4,4');
 
-  r.addEventListener('pointerdown', e => e.stopPropagation());
+  // Fase 3.4 (fix): não bloqueia o 2º dedo de uma pinça — deixa borbulhar
+  // até o SVG para montar o par de toques do pinch-to-zoom.
+  r.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch' && e.isPrimary === false) return;
+    e.stopPropagation();
+  });
   r.addEventListener('click', e => {
     e.stopPropagation();
     selecionar(no, 'anotacao', r, { x, y: y - 52 });
@@ -223,8 +228,22 @@ function criarInteracaoViewport(svg, root, d) {
     viewBox: { x: 0, y: 0, width: d.larguraTotal, height: d.alturaTotal },
     inicial: { width: d.larguraTotal, height: d.alturaTotal },
     pointers: new Map(),
-    distanciaAnterior: null,            // ← incremental; NÃO é mais um viewBox congelado
+    distanciaAnterior: null,    // ← incremental; NÃO é mais um viewBox congelado
   };
+
+  // Fase 3.4 (fix): sincroniza o cache interno de viewBox com o DOM real a
+  // qualquer momento (usado antes de pan/zoom/wheel e por módulos satélites
+  // como o Zoom Dock, via svg._sincronizarCamera).
+  function sincronizarCacheViewBox() {
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width > 0 && vb.height > 0) {
+      estado.viewBox.x = vb.x;
+      estado.viewBox.y = vb.y;
+      estado.viewBox.width = vb.width;
+      estado.viewBox.height = vb.height;
+    }
+  }
+  svg._sincronizarCamera = sincronizarCacheViewBox;
 
   const aplicar = () => {
     const v = estado.viewBox;
@@ -232,10 +251,10 @@ function criarInteracaoViewport(svg, root, d) {
   };
 
   const limitar = () => {
-    const v = estado.viewBox;
-    const mx = v.width * 0.75;
+    const v  = estado.viewBox;
+    const mx = v.width  * 0.75;
     const my = v.height * 0.75;
-    v.x = Math.max(-mx, Math.min(d.larguraTotal - v.width + mx, v.x));
+    v.x = Math.max(-mx, Math.min(d.larguraTotal - v.width  + mx, v.x));
     v.y = Math.max(-my, Math.min(d.alturaTotal - v.height + my, v.y));
   };
 
@@ -248,13 +267,26 @@ function criarInteracaoViewport(svg, root, d) {
   const distancia = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   const centro    = (a, b) => ({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
 
+  // Fase 3.4 (fix): ponto fixo analítico puro, sem depender de getScreenCTM
+  // para o delta (que retornava zero se o DOM ainda não tivesse repintado,
+  // ancorando o zoom na quina em vez do ponto tocado/apontado).
   const aplicarZoom = (fator, centroEvt) => {
-    const antes = pontoSVG(centroEvt);
-    estado.viewBox.width  = Math.max(160, Math.min(estado.inicial.width  * 4, estado.viewBox.width  * fator));
-    estado.viewBox.height = Math.max(160, Math.min(estado.inicial.height * 4, estado.viewBox.height * fator));
-    const depois = pontoSVG(centroEvt);
-    estado.viewBox.x += antes.x - depois.x;
-    estado.viewBox.y += antes.y - depois.y;
+    sincronizarCacheViewBox();
+    const rect = svg.getBoundingClientRect();
+    const u = (centroEvt.clientX - rect.left) / rect.width;
+    const v = (centroEvt.clientY - rect.top) / rect.height;
+
+    const px = estado.viewBox.x + u * estado.viewBox.width;
+    const py = estado.viewBox.y + v * estado.viewBox.height;
+
+    const novoW = Math.max(160, Math.min(estado.inicial.width * 4, estado.viewBox.width * fator));
+    const novoH = Math.max(160, Math.min(estado.inicial.height * 4, estado.viewBox.height * fator));
+
+    estado.viewBox.x = px - u * novoW;
+    estado.viewBox.y = py - v * novoH;
+    estado.viewBox.width = novoW;
+    estado.viewBox.height = novoH;
+
     limitar();
     aplicar();
   };
@@ -332,6 +364,7 @@ function criarInteracaoViewport(svg, root, d) {
   // ── wheel: zoom com roda do mouse ─────────────────────────────────────────
   svg.addEventListener('wheel', e => {
     e.preventDefault();
+    sincronizarCacheViewBox();   // Fase 3.4 (fix): garante estado atualizado antes do zoom
     aplicarZoom(e.deltaY > 0 ? 1.1 : 0.9, e);
   }, { passive: false });
 
@@ -427,7 +460,12 @@ function renderizarArvoreSVG(arvores, container) {
       if (novoTitulo !== null) window.MindNoteApp?.atualizarTitulo(no, novoTitulo);
     });
 
-    r.addEventListener('pointerdown', e => e.stopPropagation());
+    // Fase 3.4 (fix): não bloqueia o 2º dedo de uma pinça — deixa borbulhar
+    // até o SVG para montar o par de toques do pinch-to-zoom.
+    r.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' && e.isPrimary === false) return;
+      e.stopPropagation();
+    });
     r.addEventListener('click', e => {
       e.stopPropagation();
       selecionar(no, 'titulo', r, { x: px, y: py - dT.altura / 2 - 52 });

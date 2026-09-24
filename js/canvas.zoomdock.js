@@ -18,6 +18,7 @@ function obterSVGAtivo() {
 function aplicarZoomComFator(fator) {
   const svg = obterSVGAtivo();
   if (!svg) return false;
+  svg._sincronizarCamera?.();
   const estado = window.MindNoteCamera?.capturarEstado(svg);
   if (!estado) return false;
   const novaLargura = estado.width * fator;
@@ -30,31 +31,35 @@ function aplicarZoomComFator(fator) {
     width: novaLargura,
     height: novaAltura,
   };
-  return window.MindNoteCamera?.restaurarEstado(svg, novoEstado) || false;
+  const ok = window.MindNoteCamera?.restaurarEstado(svg, novoEstado) || false;
+  svg._sincronizarCamera?.();
+  return ok;
 }
 
 function escalaReal() {
-  const svg = obterSVGAtivo();
+  const svg = document.querySelector("#canvas-container svg");
   if (!svg || !svg.viewBox || !svg.viewBox.baseVal) return false;
-  // Fase 3.3 (fix): preserva o centro da visão atual em vez de saltar
-  // para a origem (0,0) do canvas.
-  const vb = svg.viewBox.baseVal;
+  svg._sincronizarCamera?.();
   const container = document.getElementById("canvas-container");
-  const w = (container && container.clientWidth) || vb.width;
-  const h = (container && container.clientHeight) || vb.height;
-  if (!w || !h) return false;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const vb = svg.viewBox.baseVal;
   const cx = vb.x + vb.width / 2;
   const cy = vb.y + vb.height / 2;
-  const novoEstado = { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
-  return window.MindNoteCamera?.restaurarEstado(svg, novoEstado) || false;
+  svg.setAttribute("viewBox", `${cx - w / 2} ${cy - h / 2} ${w} ${h}`);
+  svg._sincronizarCamera?.();
+  return true;
 }
 
 function enquadramentoTotal() {
   const svg = obterSVGAtivo();
   if (!svg) return false;
+  svg._sincronizarCamera?.();
   const canvasDimensoes = window.MindNoteApp?.obterArvoresAtuais?.()?.[0]?.canvasDimensoes;
   if (!canvasDimensoes) return false;
-  return window.MindNoteCamera?.centralizarMapa(svg, canvasDimensoes) || false;
+  const ok = window.MindNoteCamera?.centralizarMapa(svg, canvasDimensoes) || false;
+  svg._sincronizarCamera?.();
+  return ok;
 }
 
 function alternarModoEstudo() {
