@@ -461,6 +461,7 @@ inicializarComMapa,
 importarJSONBruto,
 });
 window.MindNoteApp = MindNoteApp;
+window.MindNoteApp.salvarNoStorage = salvarNoBancoAgora;
 // ─── Fase 3 (v2.0): getter público para módulos satélites (Zoom Dock) ──────
 // Nunca exponha `arvoresAtuais` diretamente no window — apenas via este getter.
 window.MindNoteApp.obterArvoresAtuais = () => arvoresAtuais;

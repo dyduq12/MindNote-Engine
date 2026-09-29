@@ -488,3 +488,150 @@ body[data-inspector-aberto="true"] #zoom-dock {
   box-shadow: 0 0 0 2px var(--mn-action-primary, #8b5cf6), 0 4px 14px rgba(0, 0, 0, 0.5) !important;
   transform: scale(1.05) !important;
 }
+
+/* Fase 4, Passo 3: Topbar, bastidores e canvas fullscreen */
+#view-editor {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+#canvas-container {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+#canvas-container > svg { display: block; width: 100%; height: 100%; }
+
+[data-mindnote-ui] .mn-topbar {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(22, 27, 38, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: auto;
+}
+[data-mindnote-ui] .mn-topbar-btn {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font: 500 13px var(--mn-font-sans);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 140ms ease;
+  white-space: nowrap;
+}
+[data-mindnote-ui] .mn-topbar-btn:hover { background: rgba(255, 255, 255, 0.1); }
+[data-mindnote-ui] .mn-topbar-btn--primary { background: var(--mn-action-primary); }
+[data-mindnote-ui] .mn-topbar-divider { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.15); }
+[data-mindnote-ui] .mn-topbar-status { color: var(--mn-text-secondary); font-size: 11px; white-space: nowrap; }
+
+[data-mindnote-ui] .mn-backstage-envelope {
+  display: flex;
+  justify-content: flex-start;
+}
+[data-mindnote-ui] .mn-backstage {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 24px));
+  border-radius: 20px;
+  background: rgba(22, 27, 38, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transform: translate3d(calc(-100% - 24px), 0, 0);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--mn-text-primary);
+  font-family: var(--mn-font-sans);
+}
+[data-mindnote-ui] .mn-backstage-envelope[data-open="true"] .mn-backstage {
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+}
+[data-mindnote-ui] .mn-backstage .mn-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--mn-border-subtle);
+}
+[data-mindnote-ui] .mn-backstage-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 12px;
+}
+[data-mindnote-ui] .mn-backstage-tabs .mn-segment-button { color: var(--mn-text-secondary); }
+[data-mindnote-ui] .mn-backstage-tabs .mn-segment-button.is-active {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.35);
+  border-color: rgba(167, 139, 250, 0.6);
+}
+[data-mindnote-ui] .mn-backstage .mn-panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 16px 16px;
+}
+[data-mindnote-ui] .mn-json-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 260px;
+  padding: 12px;
+  resize: vertical;
+  color: var(--mn-text-primary);
+  background: rgba(10, 14, 22, 0.72);
+  border: 1px solid var(--mn-border-default);
+  border-radius: 10px;
+  font: 12px/1.5 var(--mn-font-mono);
+}
+[data-mindnote-ui] .mn-tab-content[hidden] { display: none !important; }
+[data-mindnote-ui] .mn-backstage .mn-button { margin-bottom: 12px; }
+[data-mindnote-ui] .mn-topbar-status { margin: 0 4px; }
+@media (max-width: 700px) {
+  [data-mindnote-ui] .mn-topbar {
+    left: 8px;
+    right: 8px;
+    gap: 3px;
+    padding: 5px;
+    overflow-x: auto;
+  }
+  [data-mindnote-ui] .mn-topbar-btn { padding: 6px; font-size: 11px; }
+  [data-mindnote-ui] .mn-topbar-status { display: none; }
+}
+
+/* Mantém a skin da topbar acima dos estilos legados por ID */
+#mn-topbar .mn-topbar-btn {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+#mn-topbar .mn-topbar-btn:hover { background: rgba(255, 255, 255, 0.1); }
+#mn-topbar .mn-topbar-btn--primary { background: var(--mn-action-primary); }
