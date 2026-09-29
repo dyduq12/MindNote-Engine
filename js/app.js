@@ -225,6 +225,7 @@ agendarAutosave();
 // ─── Mutações ────────────────────────────────────────────────────────────────
 function adicionarFilho(no) {
 if (!no || typeof no !== "object") return null;
+window.MindNoteHistory?.registrarSnapshot("adicionar-filho");
 if (!Array.isArray(no.filhos)) no.filhos = [];
 const novoFilho = {
 titulo: "Novo Tópico",
@@ -245,6 +246,7 @@ return novoFilho;
 
 function adicionarAnotacao(no) {
 if (!no || no.anotacao !== null) return false;
+window.MindNoteHistory?.registrarSnapshot("adicionar-anotacao");
 no.anotacao = {
 tipo: "pauta",
 linhasManuais: 4,
@@ -263,7 +265,10 @@ if (!Number.isFinite(variacao)) return false;
 const atuais = Number.isFinite(no.anotacao.linhasManuais)
 ? no.anotacao.linhasManuais
 : 3;
-no.anotacao.linhasManuais = Math.max(3, Math.floor(atuais + variacao));
+const novasLinhas = Math.max(3, Math.floor(atuais + variacao));
+if (novasLinhas === atuais && no.anotacao.palavrasEstimadas == null) return false;
+window.MindNoteHistory?.registrarSnapshot("alterar-linhas");
+no.anotacao.linhasManuais = novasLinhas;
 no.anotacao.palavrasEstimadas = null;
 finalizarMutacao();
 return true;
@@ -271,6 +276,7 @@ return true;
 
 function alternarTipoAnotacao(no) {
 if (!no?.anotacao) return false;
+window.MindNoteHistory?.registrarSnapshot("alternar-tipo-anotacao");
 if (no.anotacao.tipo === "pauta") {
 no.anotacao.tipo = "ilustracao";
 no.anotacao.alturaCustomizada = 220;
@@ -288,6 +294,7 @@ return true;
 
 function adicionarAnexo(no) {
 if (!no?.anotacao || no.anotacao.anexo) return false;
+window.MindNoteHistory?.registrarSnapshot("adicionar-anexo");
 no.anotacao.anexo = { tipo: "ilustracao", altura: 220 };
 finalizarMutacao();
 return true;
@@ -295,6 +302,7 @@ return true;
 
 function removerAnotacao(no) {
 if (!no?.anotacao) return false;
+window.MindNoteHistory?.registrarSnapshot("remover-anotacao");
 no.anotacao = null;
 finalizarMutacao();
 return true;
@@ -303,6 +311,7 @@ return true;
 function adicionarNovaRaiz() {
 garantirArvoresAtuais();
 const novaRaiz = { titulo: "Novo Tema", anotacao: null, cor: null, filhos: [] };
+window.MindNoteHistory?.registrarSnapshot("adicionar-raiz");
 arvoresAtuais.push(novaRaiz);
 finalizarMutacao();
 return novaRaiz;
@@ -313,6 +322,8 @@ function atualizarTitulo(no, novoTexto) {
 if (!no || typeof novoTexto !== "string") return false;
 const titulo = novoTexto.trim();
 if (!titulo) return false;
+if (titulo === no.titulo) return false;
+window.MindNoteHistory?.registrarSnapshot("alterar-titulo");
 no.titulo = titulo;
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
@@ -325,6 +336,7 @@ function alternarCor(no) {
 if (!no) return false;
 const indiceAtual = CORES_RAMO.indexOf(no.cor !== undefined ? no.cor : null);
 const baseIndice = indiceAtual === -1 ? 0 : indiceAtual;
+window.MindNoteHistory?.registrarSnapshot("alternar-cor");
 no.cor = CORES_RAMO[(baseIndice + 1) % CORES_RAMO.length];
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
@@ -343,6 +355,7 @@ alert("Não é possível remover a única raiz do mapa mental.");
 return;
 }
 if (confirm(`Deseja realmente excluir a raiz "${noAlvo.titulo}" e todos os seus ramos?`)) {
+window.MindNoteHistory?.registrarSnapshot("remover-raiz");
 arvoresAtuais.splice(indiceRaiz, 1);
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
@@ -366,6 +379,7 @@ if (pai) break;
 }
 if (pai) {
 if (confirm(`Deseja excluir o tópico "${noAlvo.titulo}"?`)) {
+window.MindNoteHistory?.registrarSnapshot("remover-no");
 pai.filhos = pai.filhos.filter(f => f !== noAlvo);
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
@@ -380,6 +394,7 @@ agendarAutosave();
 // em branco com aquele id (permitindo que o autosave o persista já na
 // primeira mutação).
 async function inicializarComMapa(id) {
+window.MindNoteHistory?.limpar?.();
 mapaAtualId = id || window.MindNoteDB?.gerarUUID?.() || null;
 
 const indicador = document.getElementById("indicador-autosave");
@@ -423,7 +438,11 @@ function importarJSONBruto(jsonTexto) {
 const textarea = document.getElementById("entrada-json");
 if (textarea) textarea.value = jsonTexto;
 try {
-arvoresAtuais = processarJSON(jsonTexto);
+const novasArvores = processarJSON(jsonTexto);
+if (Array.isArray(arvoresAtuais) && arvoresAtuais.length > 0) {
+window.MindNoteHistory?.registrarSnapshot("importar-json");
+}
+arvoresAtuais = novasArvores;
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
 const botaoExportarEl = document.getElementById("botao-exportar-pdf");
@@ -433,6 +452,18 @@ agendarAutosave();
 const areaErroEl = document.getElementById("area-erro");
 if (areaErroEl) areaErroEl.textContent = erro.message;
 }
+}
+
+function restaurarArvores(arvores) {
+if (!Array.isArray(arvores) || arvores.length === 0) return false;
+arvoresAtuais = clonarEstadoLimpo(arvores);
+reprocessarERenderizar();
+sincronizarEstadoParaTextarea();
+salvarNoBancoAgora();
+window.dispatchEvent(new CustomEvent("mindnote:selection-change", {
+detail: { no: null, tipo: null },
+}));
+return true;
 }
 
 function aplicarTemaNaInterface() {
@@ -459,6 +490,7 @@ sincronizarEstadoParaTextarea,
 reprocessarERenderizar,
 inicializarComMapa,
 importarJSONBruto,
+restaurarArvores,
 });
 window.MindNoteApp = MindNoteApp;
 window.MindNoteApp.salvarNoStorage = salvarNoBancoAgora;
@@ -527,7 +559,11 @@ jsonParaProcessar = resultadoSanitizacao.jsonTexto;
 }
 
 try {
-arvoresAtuais = processarJSON(jsonParaProcessar);
+const novasArvores = processarJSON(jsonParaProcessar);
+if (Array.isArray(arvoresAtuais) && arvoresAtuais.length > 0) {
+window.MindNoteHistory?.registrarSnapshot("processar-json");
+}
+arvoresAtuais = novasArvores;
 reprocessarERenderizar();
 botaoExportar.disabled = false;
 agendarAutosave();

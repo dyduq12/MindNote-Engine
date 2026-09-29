@@ -419,6 +419,7 @@ body[data-inspector-aberto="true"] #zoom-dock {
     bottom: calc(78dvh + 16px) !important;
   }
 }
+
 /* Ajustes pontuais de contraste e paleta — baseline consolidado preservado */
 [data-mindnote-ui] .mn-stepper,
 [data-mindnote-ui] .mn-inspector-stepper {
@@ -1214,4 +1215,35 @@ body[data-inspector-aberto="true"] #zoom-dock {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
+}
+
+/* Controles táteis de histórico na Topbar */
+#mn-topbar .mn-topbar-btn--icon {
+  display: inline-flex !important;
+  flex: 0 0 36px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  font-family: var(--mn-font-sans, system-ui, sans-serif) !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#mn-topbar .mn-topbar-btn--icon:focus-visible {
+  outline: 2px solid var(--mn-border-focus, #a78bfa) !important;
+  outline-offset: 2px !important;
+}
+
+#mn-topbar .mn-topbar-btn--icon:disabled,
+#mn-topbar .mn-topbar-btn--icon[aria-disabled="true"] {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
 }

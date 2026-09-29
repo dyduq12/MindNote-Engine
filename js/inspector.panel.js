@@ -39,6 +39,10 @@
     render();
   }
 
+  function registrarSnapshot(origem) {
+    window.MindNoteHistory?.registrarSnapshot(origem);
+  }
+
   function stepper(container, valor, incremento, minimo, formatar, aoAlterar) {
     var controles = criar("div", "mn-inspector-stepper");
     var menos = criar("button", "mn-inspector-stepper-button", "−");
@@ -122,7 +126,12 @@
     inputTitulo.maxLength = 240;
     labelTitulo.appendChild(inputTitulo);
     identidade.appendChild(labelTitulo);
+    var snapshotTituloRegistrado = false;
     inputTitulo.addEventListener("input", function () {
+      if (!snapshotTituloRegistrado) {
+        registrarSnapshot("inspector-titulo");
+        snapshotTituloRegistrado = true;
+      }
       state.noSelecionado.titulo = inputTitulo.value;
       var heading = panel.querySelector(".mn-inspector-heading");
       if (heading) heading.textContent = inputTitulo.value || "Sem título";
@@ -133,6 +142,7 @@
         window.MindNoteApp?.reprocessarERenderizar?.();
         window.MindNoteApp?.sincronizarEstadoParaTextarea?.();
         window.MindNoteApp?.salvarNoStorage?.();
+        snapshotTituloRegistrado = false;
       }, 360);
     });
 
@@ -154,6 +164,8 @@
         botao.appendChild(criar("span", "mn-inspector-color-check", "✓"));
       }
       botao.addEventListener("click", function () {
+        if (state.noSelecionado.cor === (corClicada === "sem-cor" ? null : corClicada)) return;
+        registrarSnapshot("inspector-cor");
         state.noSelecionado.cor = corClicada === "sem-cor" ? null : corClicada;
         mutacaoRenderizar();
       });
@@ -181,6 +193,7 @@
         botao.addEventListener("click", function () {
           if (state.noSelecionado.anotacao.tipo === item[0]) return;
           var modo = item[0];
+        registrarSnapshot("inspector-tipo-anotacao");
           state.noSelecionado.anotacao.tipo = modo;
           state.noSelecionado.anotacao.alturaCustomizada = modo === "ilustracao" ? 220 : null;
           state.noSelecionado.anotacao.linhasManuais = modo === "pauta" ? 4 : null;
@@ -194,6 +207,8 @@
         var linhas = Number.isFinite(state.noSelecionado.anotacao.linhasManuais) ? state.noSelecionado.anotacao.linhasManuais : 3;
         anotacao.appendChild(criar("span", "mn-inspector-label", "Linhas manuais"));
         stepper(anotacao, linhas, 1, 3, function (n) { return n + " linhas · " + (n * 26) + " px"; }, function (proximo) {
+          if (proximo === state.noSelecionado.anotacao.linhasManuais) return;
+          registrarSnapshot("inspector-linhas");
           state.noSelecionado.anotacao.linhasManuais = proximo;
           mutacaoRenderizar();
         });
@@ -204,6 +219,8 @@
     if (state.noSelecionado.anotacao && state.noSelecionado.anotacao.anexo) {
       var altura = Number(state.noSelecionado.anotacao.anexo.altura) || 220;
       stepper(dimensoes, altura, 26, 120, function (n) { return "Altura do anexo · " + n + " px"; }, function (proximo) {
+        if (proximo === Number(state.noSelecionado.anotacao.anexo.altura)) return;
+        registrarSnapshot("inspector-altura-anexo");
         state.noSelecionado.anotacao.anexo.altura = proximo;
         mutacaoRenderizar();
       });
