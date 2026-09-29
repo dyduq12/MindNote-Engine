@@ -919,3 +919,299 @@ body[data-inspector-aberto="true"] #zoom-dock {
   font-size: 13px !important;
   outline: none !important;
 }
+
+/* Design System — floating pill navigation e controles circulares */
+#mn-topbar {
+  position: fixed !important;
+  top: 14px !important;
+  left: 20px !important;
+  height: 42px !important;
+  z-index: 300 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+  background: rgba(22, 27, 38, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+.mn-topbar-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  font-family: var(--mn-font-sans, sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 550 !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  white-space: nowrap !important;
+}
+.mn-topbar-btn:hover { color: #ffffff !important; background: rgba(255, 255, 255, 0.08) !important; }
+.mn-topbar-btn:active { transform: scale(0.95) !important; }
+.mn-topbar-btn--primary,
+#botao-exportar-pdf {
+  height: 30px !important;
+  padding: 0 14px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85) 0%, rgba(124, 58, 237, 0.95) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  font-weight: 600 !important;
+}
+.mn-topbar-btn--primary:hover,
+#botao-exportar-pdf:hover {
+  background: linear-gradient(135deg, rgba(147, 103, 248, 0.95) 0%, rgba(132, 68, 245, 1) 100%) !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+.mn-topbar-divider {
+  width: 1px !important;
+  height: 16px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  margin: 0 2px !important;
+}
+.mn-topbar-status {
+  font-family: var(--mn-font-mono, monospace) !important;
+  font-size: 11px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  padding: 0 8px 0 4px !important;
+}
+
+/* X circular translúcido nos dois painéis (o Inspetor usa classe própria) */
+[data-mindnote-ui] .mn-icon-button,
+#btn-fechar-backstage,
+[data-mindnote-ui] .mn-inspector-close {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 999px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+}
+[data-mindnote-ui] .mn-icon-button:hover,
+#btn-fechar-backstage:hover,
+[data-mindnote-ui] .mn-inspector-close:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+[data-mindnote-ui] .mn-icon-button:active,
+#btn-fechar-backstage:active,
+[data-mindnote-ui] .mn-inspector-close:active { transform: scale(0.92) !important; }
+
+/* Material e abas em cápsula do Backstage */
+[data-mindnote-ui] .mn-backstage {
+  background: rgba(22, 27, 38, 0.88) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+.mn-backstage-tabs {
+  background: rgba(10, 14, 22, 0.5) !important;
+  border-radius: 999px !important;
+  padding: 3px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.mn-backstage-tabs .mn-segment-button {
+  border-radius: 999px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 12px !important;
+}
+.mn-backstage-tabs .mn-segment-button.is-active,
+.mn-backstage-tabs .mn-segment-button[aria-selected="true"] {
+  background: rgba(139, 92, 246, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Ajuste ergonômico final — topbar arejada e placa de vidro compartilhada */
+#mn-topbar {
+  top: 14px !important;
+  left: 20px !important;
+  right: auto !important;
+  width: max-content !important;
+  max-width: calc(100vw - 40px) !important;
+  height: 54px !important;
+  gap: 6px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(18, 22, 32, 0.62) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 12px 32px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  box-sizing: border-box !important;
+}
+#mn-topbar::before {
+  border-radius: inherit;
+  pointer-events: none;
+}
+#mn-topbar .mn-topbar-btn,
+#mn-topbar .mn-topbar-btn--primary,
+#mn-topbar #botao-exportar-pdf {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  line-height: 1 !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+}
+#mn-topbar .mn-topbar-btn--primary,
+#mn-topbar #botao-exportar-pdf {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  font-weight: 600 !important;
+}
+#mn-topbar .mn-topbar-divider { flex: 0 0 1px !important; }
+#mn-topbar .mn-topbar-status { flex: 0 0 auto !important; }
+
+/* Topbar e Backstage compartilham a superfície e o bisel do Inspetor */
+[data-mindnote-ui] .mn-backstage {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(18, 22, 32, 0.62) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 12px 32px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* X com a mesma escala, aro e resposta tátil nos dois painéis */
+[data-mindnote-ui] .mn-icon-button,
+#btn-fechar-backstage,
+[data-mindnote-ui] .mn-inspector-close {
+  box-sizing: border-box !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+[data-mindnote-ui] .mn-icon-button:hover,
+#btn-fechar-backstage:hover,
+[data-mindnote-ui] .mn-inspector-close:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 700px) {
+  #mn-topbar {
+    left: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    height: 54px !important;
+    padding: 0 8px !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+  #mn-topbar::-webkit-scrollbar { display: none; }
+  #mn-topbar .mn-topbar-btn,
+  #mn-topbar .mn-topbar-btn--primary,
+  #mn-topbar #botao-exportar-pdf {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+}
+
+/* Ajustes espaciais e Zoom Dock Liquid Glass */
+:root {
+  --mn-topbar-safe-top: max(14px, env(safe-area-inset-top));
+  --mn-topbar-height: 54px;
+  --mn-backstage-gap: 14px;
+}
+#mn-topbar { top: var(--mn-topbar-safe-top) !important; }
+[data-mindnote-ui] .mn-backstage {
+  top: calc(var(--mn-topbar-safe-top) + var(--mn-topbar-height) + var(--mn-backstage-gap)) !important;
+}
+
+#zoom-dock {
+  position: fixed !important;
+  right: 20px !important;
+  bottom: max(20px, env(safe-area-inset-bottom)) !important;
+  z-index: 180 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 7px 9px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(18, 22, 32, 0.62) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), inset 0 -1px 1px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  transition: right 320ms cubic-bezier(0.16, 1, 0.3, 1), bottom 320ms cubic-bezier(0.16, 1, 0.3, 1), background-color 180ms ease !important;
+}
+#zoom-dock .zoom-dock-btn {
+  box-sizing: border-box !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  min-width: 38px !important;
+  width: 38px !important;
+  height: 38px !important;
+  padding: 0 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  font-family: var(--mn-font-sans, system-ui, sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease, border-color 140ms ease !important;
+}
+#zoom-dock .zoom-dock-btn:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+#zoom-dock .zoom-dock-btn:active { transform: scale(0.92) !important; }
+#zoom-dock .zoom-dock-btn.ativo {
+  color: #ffffff !important;
+  background: rgba(139, 92, 246, 0.5) !important;
+  border-color: rgba(167, 139, 250, 0.6) !important;
+}
+body[data-inspector-aberto="true"] #zoom-dock {
+  right: calc(var(--mn-inspector-width, 380px) + 24px) !important;
+}
+@media (max-width: 700px) {
+  body[data-inspector-aberto="true"] #zoom-dock {
+    right: 20px !important;
+    bottom: calc(78dvh + 16px + env(safe-area-inset-bottom)) !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  #zoom-dock {
+    background: var(--mn-surface-glass-solid, rgb(27 32 42 / 0.98)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
