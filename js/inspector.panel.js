@@ -9,8 +9,19 @@
     secoesAbertas: new Set(["identidade", "anotacao", "anexo", "acoes"])
   };
   var cores = [
-    "#2563EB", "#059669", "#D97706", "#7C3AED", "#DC2626", "#0891B2",
-    "#DB2777", "#65A30D", "#EA580C", "#4F46E5", "#0F766E", "#9333EA"
+    { name: "Sem cor (Padrão)", value: "sem-cor", isDefault: true },
+    { name: "Azul", value: "#2563EB" },
+    { name: "Verde", value: "#059669" },
+    { name: "Âmbar", value: "#D97706" },
+    { name: "Violeta", value: "#7C3AED" },
+    { name: "Vermelho", value: "#DC2626" },
+    { name: "Ciano", value: "#0891B2" },
+    { name: "Rosa", value: "#DB2777" },
+    { name: "Lima", value: "#65A30D" },
+    { name: "Laranja", value: "#EA580C" },
+    { name: "Índigo", value: "#4F46E5" },
+    { name: "Verde-azulado", value: "#0F766E" },
+    { name: "Púrpura", value: "#9333EA" }
   ];
   if (!envelope || !panel) return;
 
@@ -126,19 +137,24 @@
     });
 
     var coresWrap = criar("div", "mn-inspector-color-grid");
-    cores.forEach(function (cor) {
-      var botao = criar("button", "mn-inspector-color");
+    cores.forEach(function (itemCor) {
+      var padrao = itemCor.isDefault === true;
+      var corClicada = itemCor.value;
+      var selecionada = padrao
+        ? state.noSelecionado.cor === null || state.noSelecionado.cor === undefined || state.noSelecionado.cor === ""
+        : state.noSelecionado.cor === corClicada;
+      var botao = criar("button", "mn-inspector-color" + (padrao ? " mn-inspector-color--default" : ""));
       botao.type = "button";
-      botao.style.setProperty("--mn-swatch", cor);
-      botao.setAttribute("aria-label", "Cor " + cor);
-      botao.setAttribute("aria-pressed", String(state.noSelecionado.cor === cor));
-      if (state.noSelecionado.cor === cor) {
+      if (!padrao) botao.style.setProperty("--mn-swatch", corClicada);
+      botao.setAttribute("aria-label", itemCor.name);
+      botao.setAttribute("aria-pressed", String(selecionada));
+      if (padrao) botao.appendChild(criar("span", "mn-inspector-color-reset", "⊘"));
+      if (selecionada) {
         botao.classList.add("is-active");
         botao.appendChild(criar("span", "mn-inspector-color-check", "✓"));
       }
       botao.addEventListener("click", function () {
-        var corEscolhida = cor;
-        state.noSelecionado.cor = corEscolhida;
+        state.noSelecionado.cor = corClicada === "sem-cor" ? null : corClicada;
         mutacaoRenderizar();
       });
       coresWrap.appendChild(botao);

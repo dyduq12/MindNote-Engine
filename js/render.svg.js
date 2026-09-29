@@ -24,9 +24,35 @@ function el(tag, a = {}) {
   Object.entries(a).forEach(([n, v]) => e.setAttribute(n, String(v)));
   return e;
 }
-function percorrerArvore(no, cb) {
-  cb(no);
-  no.filhos.forEach(f => percorrerArvore(f, cb));
+const COR_PADRAO_NEUTRA = "#64748b";
+function percorrerArvore(no, cb, corPai = null) {
+  const corEfetiva = no.cor || corPai || COR_PADRAO_NEUTRA;
+  cb(no, corEfetiva);
+  no.filhos.forEach(f => percorrerArvore(f, cb, corEfetiva));
+}
+
+function adicionarHitbox(g, limites, raio, no, tipo, elemento, pos) {
+  const hitbox = el("rect", {
+    x: limites.x - 8,
+    y: limites.y - 8,
+    width: limites.width + 16,
+    height: limites.height + 16,
+    rx: raio + 4,
+    class: "mindnote-hitbox",
+    fill: "transparent",
+    "pointer-events": "all",
+    cursor: "pointer",
+  });
+  hitbox.style.strokeWidth = '0';
+  hitbox.addEventListener("pointerdown", e => {
+    if (e.pointerType === "touch" && e.isPrimary === false) return;
+    e.stopPropagation();
+  });
+  hitbox.addEventListener("click", e => {
+    e.stopPropagation();
+    selecionar(no, tipo, elemento, pos);
+  });
+  g.appendChild(hitbox);
 }
 
 // ─── Estado de interação ─────────────────────────────────────────────────────
@@ -39,7 +65,7 @@ let resizeState = null;                 // estado do drag-to-resize
 function ehElementoInterativo(target) {
   return Boolean(
     target.closest?.(
-      '.mindnote-node, .mindnote-box, .mindnote-handle, #micro-toolbar'
+      '.mindnote-node, .mindnote-box, .mindnote-hitbox, .mindnote-handle, #micro-toolbar'
     )
   );
 }
@@ -178,7 +204,7 @@ function adicionarHandleResize(no, pos, d, g, anexo, svg) {
 }
 
 // ─── Caixa de anotação ────────────────────────────────────────────────────────
-function caixa(no, pos, d, g, anexo, svg) {
+function caixa(no, pos, d, g, anexo, svg, corEfetiva) {
   const t = tema();
   const x = pos.x;
   const y = pos.y - d.altura / 2;
@@ -188,11 +214,13 @@ function caixa(no, pos, d, g, anexo, svg) {
     width: d.largura, height: d.altura,
     rx: 6, ry: 6,
     fill:   d.tipo === 'ilustracao' ? 'url(#dot-grid)' : t.anotacao,
-    stroke: d.tipo === 'ilustracao' ? t.ilustracao : t.anotacaoBorda,
+    stroke: corEfetiva,
     'stroke-width': d.tipo === 'ilustracao' ? 2 : 1.5,
+    'stroke-opacity': d.tipo === 'ilustracao' ? 1 : 0.5,
     class: 'mindnote-box',
     'pointer-events': 'all',   // Fase 3.3 (fix): garante clique em toda a área interna
   });
+  adicionarHitbox(g, { x, y, width: d.largura, height: d.altura }, 6, no, 'anotacao', r, { x, y: y - 52 });
   if (d.tipo !== 'ilustracao') r.setAttribute('stroke-dasharray', '4,4');
 
   // Fase 3.4 (fix): não bloqueia o 2º dedo de uma pinça — deixa borbulhar
@@ -413,9 +441,9 @@ function renderizarArvoreSVG(arvores, container) {
   });
 
   // ── 1ª passagem: conectores (ficam atrás dos nós) ─────────────────────────
-  arvores.forEach(a => percorrerArvore(a, no => {
+  arvores.forEach(a => percorrerArvore(a, (no, corEfetiva) => {
     // Cor do conector: usa no.cor se definido, senão tema
-    const corConector = no.cor || t.conector;
+    const corConector = corEfetiva;
 
     no.conectoresFilhos.forEach(k => {
       const c = k.curva;
@@ -429,25 +457,25 @@ function renderizarArvoreSVG(arvores, container) {
       root.appendChild(el('line', {
         x1: no.conectorAnotacao.x1, y1: no.conectorAnotacao.y1,
         x2: no.conectorAnotacao.x2, y2: no.conectorAnotacao.y2,
-        stroke: t.conector, 'stroke-width': 2,
+        stroke: corEfetiva, 'stroke-width': 2,
       }));
     if (no.conectorAnexo)
       root.appendChild(el('line', {
         x1: no.conectorAnexo.x1, y1: no.conectorAnexo.y1,
         x2: no.conectorAnexo.x2, y2: no.conectorAnexo.y2,
-        stroke: t.conector, 'stroke-width': 2,
+        stroke: corEfetiva, 'stroke-width': 2,
       }));
   }));
 
   // ── 2ª passagem: nós (pílulas + caixas) ──────────────────────────────────
-  arvores.forEach(a => percorrerArvore(a, no => {
+  arvores.forEach(a => percorrerArvore(a, (no, corEfetiva) => {
     const dT = no.dimensoes.titulo;
     const g  = el('g');
     const px = no.posicao.x;
     const py = no.posicao.y;
 
     // Cor de borda da pílula: usa no.cor se definido
-    const bordaPilula = no.cor || t.borda;
+    const bordaPilula = corEfetiva;
 
     const r = el('rect', {
       x: px, y: py - dT.altura / 2,
@@ -478,15 +506,18 @@ function renderizarArvoreSVG(arvores, container) {
       selecionar(no, 'titulo', r, { x: px, y: py - dT.altura / 2 - 52 });
     });
 
+    adicionarHitbox(g, { x: px, y: py - dT.altura / 2, width: dT.largura, height: dT.altura }, 8, no, 'titulo', r, { x: px, y: py - dT.altura / 2 - 52 });
     g.appendChild(r);
     texto(g, no, dT, px + dT.largura / 2, py);
     root.appendChild(g);
 
     // Caixas de anotação e anexo
     if (no.dimensoes.anotacao) {
+      const grupoAnotacao = el('g');
       if (no.dimensoes.anotacao.anexo)
-        caixa(no, no.posicaoAnexo, no.dimensoes.anotacao.anexo, root, true, svg);
-      caixa(no, no.posicaoAnotacao, no.dimensoes.anotacao, root, false, svg);
+        caixa(no, no.posicaoAnexo, no.dimensoes.anotacao.anexo, grupoAnotacao, true, svg, corEfetiva);
+      caixa(no, no.posicaoAnotacao, no.dimensoes.anotacao, grupoAnotacao, false, svg, corEfetiva);
+      root.appendChild(grupoAnotacao);
     }
   }));
 

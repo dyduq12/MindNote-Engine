@@ -5,6 +5,8 @@
   var painel = document.getElementById("json-backstage");
   var botaoAbrir = document.getElementById("btn-abrir-backstage");
   var botaoFechar = document.getElementById("btn-fechar-backstage");
+  var botaoProcessarTopo = document.getElementById("btn-processar-topo");
+  var botaoProcessar = document.getElementById("botao-processar");
   var abas = Array.from(document.querySelectorAll("#json-backstage [data-tab]"));
   if (!envelope || !painel) return;
 
@@ -56,6 +58,7 @@
 
   if (botaoAbrir) botaoAbrir.addEventListener("click", open);
   if (botaoFechar) botaoFechar.addEventListener("click", close);
+  if (botaoProcessarTopo) botaoProcessarTopo.addEventListener("click", function () { botaoProcessar?.click(); });
   abas.forEach(function (aba) {
     aba.addEventListener("click", function () { selecionarAba(aba.dataset.tab); });
   });

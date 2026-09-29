@@ -51,9 +51,10 @@ function setTxt(doc, hex) {
 }
 
 // ─── Iterador recursivo de árvore ────────────────────────────────────────────
-function percorrerArvorePDF(no, cb) {
-  cb(no);
-  no.filhos.forEach(f => percorrerArvorePDF(f, cb));
+function percorrerArvorePDF(no, cb, corPai = null) {
+  const corEfetiva = no.cor || corPai || "#64748b";
+  cb(no, corEfetiva);
+  no.filhos.forEach(f => percorrerArvorePDF(f, cb, corEfetiva));
 }
 
 // ─── Extrai nome de arquivo a partir do título da raiz ───────────────────────
@@ -170,14 +171,14 @@ function desenharConectores(doc, arvores, paleta, offsetX, offsetY) {
   doc.setLineCap('round');
   doc.setLineDashPattern([], 0);
 
-  arvores.forEach(raiz => percorrerArvorePDF(raiz, no => {
+  arvores.forEach(raiz => percorrerArvorePDF(raiz, (no, corEfetiva) => {
     // ── Curvas cúbicas pai → filhos ──────────────────────────────────────────
     if (Array.isArray(no.conectoresFilhos)) {
       no.conectoresFilhos.forEach(k => {
         const c = k.curva;
         if (!c) return;
 
-        const corConector = no.cor || paleta.conector;
+        const corConector = corEfetiva;
         setDraw(doc, corConector);
 
         // dx1..dy3 são deslocamentos RELATIVOS — não recebem offset
@@ -194,7 +195,7 @@ function desenharConectores(doc, arvores, paleta, offsetX, offsetY) {
     }
 
     // Restaura cor padrão
-    setDraw(doc, paleta.conector);
+    setDraw(doc, corEfetiva);
 
     // ── Conector título → caixa de anotação ──────────────────────────────────
     if (no.conectorAnotacao) {
@@ -218,7 +219,7 @@ function desenharConectores(doc, arvores, paleta, offsetX, offsetY) {
 // PASSAGEM 2 — Pílulas de título
 // ═══════════════════════════════════════════════════════════════════════════════
 function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
-  arvores.forEach(raiz => percorrerArvorePDF(raiz, no => {
+  arvores.forEach(raiz => percorrerArvorePDF(raiz, (no, corEfetiva) => {
     const dT = no.dimensoes?.titulo;
     if (!dT) return;
 
@@ -227,7 +228,7 @@ function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
 
     // ── Fundo e borda ─────────────────────────────────────────────────────────
     setFill(doc, paleta.pilulaFill);
-    setDraw(doc, no.cor || paleta.pilulaBordaPad);
+    setDraw(doc, corEfetiva);
     doc.setLineWidth(no.cor ? 2.5 : 2);
     doc.setLineDashPattern([], 0);
     doc.roundedRect(x, y, dT.largura, dT.altura, 8, 8, 'FD');
@@ -257,7 +258,7 @@ function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
 // PASSAGEM 3 — Caixas de anotação e anexos
 // ═══════════════════════════════════════════════════════════════════════════════
 function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
-  arvores.forEach(raiz => percorrerArvorePDF(raiz, no => {
+  arvores.forEach(raiz => percorrerArvorePDF(raiz, (no, corEfetiva) => {
     const dA = no.dimensoes?.anotacao;
     if (!dA) return;
 
@@ -267,7 +268,7 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
 
     if (dA.tipo === 'pauta') {
       setFill(doc, paleta.caixaFill);
-      setDraw(doc, paleta.caixaBorda);
+      setDraw(doc, corEfetiva);
       doc.setLineWidth(1.5);
       doc.setLineDashPattern([4, 4], 0);
       doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'FD');
@@ -288,7 +289,7 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
     } else {
       // tipo === 'ilustracao'
       setFill(doc, paleta.caixaFill);
-      setDraw(doc, paleta.anexoBorda);
+      setDraw(doc, corEfetiva);
       doc.setLineWidth(2);
       doc.setLineDashPattern([], 0);
       doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'FD');
@@ -300,7 +301,7 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
       const xAn = no.posicaoAnexo.x + offsetX;
       const yAn = no.posicaoAnexo.y - dAnexo.altura / 2 + offsetY;
       setFill(doc, paleta.anexoFill);
-      setDraw(doc, paleta.anexoBorda);
+      setDraw(doc, corEfetiva);
       doc.setLineWidth(2);
       doc.setLineDashPattern([], 0);
       doc.roundedRect(xAn, yAn, dAnexo.largura, dAnexo.altura, 6, 6, 'FD');
