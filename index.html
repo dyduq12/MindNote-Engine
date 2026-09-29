@@ -7,6 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
 
@@ -52,6 +53,11 @@
       <pre id="area-erro" class="erro"></pre>
     </div>
     <main id="canvas-container" aria-label="Mapa mental SVG"></main>
+    <div id="mindnote-ui-layer" data-mindnote-ui>
+      <div id="node-inspector-envelope" class="mn-inspector-envelope" aria-hidden="true" data-open="false">
+        <aside id="node-inspector" class="mn-inspector mn-glass mn-glass--strong" aria-label="Inspetor do nó" aria-hidden="true"></aside>
+      </div>
+    </div>
   </section>
 
   <!-- Fase 2 (v2.0): camada de persistência local — não depende de nenhum outro script -->
@@ -71,6 +77,8 @@
   <!-- Fase 3 (v2.0): estabilização de câmera e Zoom Dock — devem vir antes de app.js -->
   <script src="js/canvas.camera.js"></script>
   <script src="js/canvas.zoomdock.js"></script>
+  <script src="js/ui.performance.js"></script>
+  <script src="js/inspector.panel.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

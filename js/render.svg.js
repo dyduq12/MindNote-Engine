@@ -49,6 +49,7 @@ function limparSelecao() {
   if (selecaoAtual?.elemento) selecaoAtual.elemento.classList.remove('mindnote-selected');
   selecaoAtual = null;
   if (toolbarAtual) { toolbarAtual.remove(); toolbarAtual = null; }
+  window.dispatchEvent(new CustomEvent('mindnote:selection-change', { detail: { no: null, tipo: null } }));
 }
 
 function acaoToolbar(rotulo, acao) {
@@ -104,7 +105,9 @@ function selecionar(no, tipo, elemento, pos) {
   limparSelecao();
   selecaoAtual = { no, tipo, elemento };
   elemento.classList.add('mindnote-selected');
-  exibirToolbar(no, tipo, elemento, pos);
+  window.dispatchEvent(new CustomEvent('mindnote:selection-change', { detail: { no, tipo } }));
+  const inspetorAtivo = document.getElementById('node-inspector-envelope')?.dataset.open === 'true';
+  if (tipo !== 'titulo' || !inspetorAtivo) exibirToolbar(no, tipo, elemento, pos);
 }
 
 // ─── TEXTO nas pílulas ────────────────────────────────────────────────────────
@@ -306,6 +309,7 @@ function criarInteracaoViewport(svg, root, d) {
       estado.viewBox.height = vbAtual.height;
     }
     svg.setPointerCapture(e.pointerId);
+    window.dispatchEvent(new CustomEvent('mindnote:canvas-interaction', { detail: { phase: 'start', type: 'pan' } }));
     estado.pointers.set(e.pointerId, e);
     // Segundo dedo: inicializa distância incremental
     if (estado.pointers.size === 2) {
@@ -355,6 +359,7 @@ function criarInteracaoViewport(svg, root, d) {
       return;
     }
     estado.pointers.delete(e.pointerId);
+    window.dispatchEvent(new CustomEvent('mindnote:canvas-interaction', { detail: { phase: 'end', type: 'pan' } }));
     // Ao soltar qualquer dedo do pinch, reinicializa distância
     if (estado.pointers.size < 2) estado.distanciaAnterior = null;
   };
@@ -364,8 +369,10 @@ function criarInteracaoViewport(svg, root, d) {
   // ── wheel: zoom com roda do mouse ─────────────────────────────────────────
   svg.addEventListener('wheel', e => {
     e.preventDefault();
+    window.dispatchEvent(new CustomEvent('mindnote:canvas-interaction', { detail: { phase: 'start', type: 'zoom' } }));
     sincronizarCacheViewBox();   // Fase 3.4 (fix): garante estado atualizado antes do zoom
     aplicarZoom(e.deltaY > 0 ? 1.1 : 0.9, e);
+    window.dispatchEvent(new CustomEvent('mindnote:canvas-interaction', { detail: { phase: 'end', type: 'zoom' } }));
   }, { passive: false });
 
   aplicar();
