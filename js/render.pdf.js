@@ -3,7 +3,7 @@
  *
  * Correções aplicadas (commit fix/pdf-bounding-box):
  *   1. Bounding box calculado varrendo todos os nós — sem depender de canvasDimensoes.
- *   2. Margem simétrica uniforme de 60 px em todos os lados.
+ *   2. Folha vetorial dinâmica com 40 px livres em cada lado.
  *   3. offsetX / offsetY corrigem qualquer deslocamento assimétrico.
  *   4. temaAtivo ('claro' | 'escuro') recebido como parâmetro — paletas independentes.
  *
@@ -17,14 +17,12 @@
  */
 
 // ─── Constantes físicas sagradas (espelham engine.text.js — NÃO alterar) ────
-const PDF_CAIXA_LARGURA      = 420;   // px — largura única da caixa de anotação
 const PDF_ENTRELINHA         = 26;    // px — escala de entrelinha calibrada
 const PDF_PADDING_VERTICAL   = 16;    // px
 const PDF_PADDING_HORIZONTAL = 20;    // px
-const PDF_MARGEM_CANVAS      = 150;   // px
 
-// ─── Margem de respiro simétrica do PDF ──────────────────────────────────────
-const MARGEM = 60;   // px — uniforme nos 4 lados
+// ─── Respiro vetorial de 40 px, sem redimensionar o grafo ────────────────────
+const RESPIRO = 40;
 
 // ─── Utilitário: hex '#RRGGBB' → [r, g, b] (0–255) ──────────────────────────
 function hexParaRGB(hex) {
@@ -34,6 +32,11 @@ function hexParaRGB(hex) {
     parseInt(h.slice(2, 4), 16),
     parseInt(h.slice(4, 6), 16),
   ];
+}
+
+function misturarHex(frente, fundo, opacidade) {
+  const a = hexParaRGB(frente), b = hexParaRGB(fundo);
+  return `#${a.map((canal, index) => Math.round(canal * opacidade + b[index] * (1 - opacidade)).toString(16).padStart(2, '0')).join('')}`;
 }
 
 // ─── Utilitários de cor para jsPDF ───────────────────────────────────────────
@@ -48,6 +51,18 @@ function setFill(doc, hex) {
 function setTxt(doc, hex) {
   const [r, g, b] = hexParaRGB(hex);
   doc.setTextColor(r, g, b);
+}
+
+function desenharPontosGrade(doc, x, y, largura, altura, cor, offsetX = 0, offsetY = 0) {
+  setFill(doc, cor);
+  const inicioX = Math.ceil((x - offsetX - 3) / 24) * 24 + 3 + offsetX;
+  const inicioY = Math.ceil((y - offsetY - 3) / 24) * 24 + 3 + offsetY;
+  for (let gx = inicioX; gx < x + largura; gx += 24) {
+    for (let gy = inicioY; gy < y + altura; gy += 24) {
+      const pertoCanto = (gx < x + 6 || gx > x + largura - 6) && (gy < y + 6 || gy > y + altura - 6);
+      if (!pertoCanto) doc.circle(gx, gy, 1.5, 'F');
+    }
+  }
 }
 
 // ─── Iterador recursivo de árvore ────────────────────────────────────────────
@@ -71,13 +86,14 @@ function obterNomeArquivo(arvores) {
 // ─── Paletas de tema ──────────────────────────────────────────────────────────
 const PALETA = {
   claro: {
-    fundo:          '#F9FAFB',
+    fundo:          '#F3F4F6',
     pilulaFill:     '#FFFFFF',
     pilulaBordaPad: '#374151',   // quando no.cor for null
     pilulaTxt:      '#111827',
     caixaFill:      '#FCFCFD',
     caixaBorda:     '#9CA3AF',
     caixaLinhasPauta: '#D1D5DB',
+    gradeIlustracao: '#E5E7EB',
     anexoFill:      '#FCFCFD',
     anexoBorda:     '#6B7280',
     conector:       '#9CA3AF',
@@ -90,6 +106,7 @@ const PALETA = {
     caixaFill:      '#27272A',
     caixaBorda:     '#52525B',
     caixaLinhasPauta: '#3F3F46',
+    gradeIlustracao: '#3F3F46',
     anexoFill:      '#27272A',
     anexoBorda:     '#71717A',
     conector:       '#71717A',
@@ -99,9 +116,27 @@ const PALETA = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOUNDING BOX DINÂMICO
 // Varre todos os nós de todas as árvores e retorna os limites reais ocupados
-// mais o offsetX/offsetY necessários para centralizar o conteúdo com MARGEM.
+// mais os offsets necessários para manter 40 px de respiro ao redor.
 // ═══════════════════════════════════════════════════════════════════════════════
 function calcularBoundingBox(arvores) {
+  const rootSvg = document.querySelector("#canvas-container svg #viewport-root");
+  if (rootSvg?.getBBox) {
+    const auxiliares = rootSvg.querySelectorAll(".mindnote-hitbox, .mindnote-handle, #micro-toolbar");
+    const estilos = Array.from(auxiliares, (el) => el.style.display);
+    try {
+      auxiliares.forEach((el) => { el.style.display = "none"; });
+      const box = rootSvg.getBBox();
+      if (box.width > 0 && box.height > 0) {
+        return {
+          larguraTotal: box.width + RESPIRO * 2,
+          alturaTotal: box.height + RESPIRO * 2,
+          offsetX: RESPIRO - box.x,
+          offsetY: RESPIRO - box.y,
+        };
+      }
+    } catch { /* fallback para os limites geométricos persistidos */ }
+    finally { auxiliares.forEach((el, index) => { el.style.display = estilos[index]; }); }
+  }
   let minX =  Infinity,  minY =  Infinity;
   let maxX = -Infinity,  maxY = -Infinity;
 
@@ -155,10 +190,10 @@ function calcularBoundingBox(arvores) {
   // Guarda contra árvores vazias
   if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 800; maxY = 600; }
 
-  const larguraTotal = Math.ceil((maxX - minX) + MARGEM * 2);
-  const alturaTotal  = Math.ceil((maxY - minY) + MARGEM * 2);
-  const offsetX      = MARGEM - minX;
-  const offsetY      = MARGEM - minY;
+  const larguraTotal = (maxX - minX) + RESPIRO * 2;
+  const alturaTotal  = (maxY - minY) + RESPIRO * 2;
+  const offsetX      = RESPIRO - minX;
+  const offsetY      = RESPIRO - minY;
 
   return { larguraTotal, alturaTotal, offsetX, offsetY };
 }
@@ -236,11 +271,11 @@ function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
     // ── Texto centralizado ────────────────────────────────────────────────────
     setTxt(doc, paleta.pilulaTxt);
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(15);
 
     const linhas        = dT.linhasTexto || [no.titulo];
     const totalLinhas   = linhas.length;
-    const espacamento   = 16;
+    const espacamento   = 22;
     const alturaBloco   = (totalLinhas - 1) * espacamento;
     const yInicial      = (no.posicao.y + offsetY) - alturaBloco / 2;
     const xCentro       = x + dT.largura / 2;
@@ -268,13 +303,13 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
 
     if (dA.tipo === 'pauta') {
       setFill(doc, paleta.caixaFill);
-      setDraw(doc, corEfetiva);
+      setDraw(doc, misturarHex(corEfetiva, paleta.caixaFill, .5));
       doc.setLineWidth(1.5);
       doc.setLineDashPattern([4, 4], 0);
       doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'FD');
       doc.setLineDashPattern([], 0);
 
-      setDraw(doc, paleta.caixaLinhasPauta);
+      setDraw(doc, misturarHex(paleta.caixaLinhasPauta, paleta.caixaFill, .8));
       doc.setLineWidth(1);
       const pv   = dA.paddingVertical   || PDF_PADDING_VERTICAL;
       const ph   = dA.paddingHorizontal || PDF_PADDING_HORIZONTAL;
@@ -288,11 +323,13 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
 
     } else {
       // tipo === 'ilustracao'
-      setFill(doc, paleta.caixaFill);
+      setFill(doc, paleta.fundo);
+      doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'F');
+      desenharPontosGrade(doc, xA, yA, dA.largura, dA.altura, paleta.gradeIlustracao, offsetX, offsetY);
       setDraw(doc, corEfetiva);
       doc.setLineWidth(2);
       doc.setLineDashPattern([], 0);
-      doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'FD');
+      doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'S');
     }
 
     // ── 3b. Caixa de anexo (se existir) ──────────────────────────────────────
@@ -300,11 +337,13 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
     if (dAnexo && no.posicaoAnexo) {
       const xAn = no.posicaoAnexo.x + offsetX;
       const yAn = no.posicaoAnexo.y - dAnexo.altura / 2 + offsetY;
-      setFill(doc, paleta.anexoFill);
+      setFill(doc, paleta.fundo);
+      doc.roundedRect(xAn, yAn, dAnexo.largura, dAnexo.altura, 6, 6, 'F');
+      desenharPontosGrade(doc, xAn, yAn, dAnexo.largura, dAnexo.altura, paleta.gradeIlustracao, offsetX, offsetY);
       setDraw(doc, corEfetiva);
       doc.setLineWidth(2);
       doc.setLineDashPattern([], 0);
-      doc.roundedRect(xAn, yAn, dAnexo.largura, dAnexo.altura, 6, 6, 'FD');
+      doc.roundedRect(xAn, yAn, dAnexo.largura, dAnexo.altura, 6, 6, 'S');
     }
   }));
 }

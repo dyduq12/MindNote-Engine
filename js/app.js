@@ -96,7 +96,7 @@ return listaBruta.map((raiz) => validarNo(raiz, 0));
 
 function obterEscalaEntrelinha() {
 const valor = Number(document.getElementById("entrada-escala")?.value);
-return Number.isFinite(valor) && valor > 0 ? valor : 26;
+return Number.isFinite(valor) && valor > 0 ? Math.max(26, valor) : 26;
 }
 
 // ─── Ciclo principal ───────────────────────────────────────────────────────
@@ -408,7 +408,7 @@ const registro = await window.MindNoteDB.carregarMapa(id);
 if (registro) {
 arvoresAtuais = registro.arvores;
 mapaAtualTitulo = registro.meta.titulo;
-temaAtual = registro.meta.tema === "escuro" ? "escuro" : "claro";
+ temaAtual = window.MindNoteTheme?.obter?.() || (registro.meta.tema === "escuro" ? "escuro" : "claro");
 aplicarTemaNaInterface();
 reprocessarERenderizar();
 sincronizarEstadoParaTextarea();
@@ -468,12 +468,27 @@ return true;
 
 function aplicarTemaNaInterface() {
 definirTema(temaAtual);
+if (window.MindNoteTheme) window.MindNoteTheme.aplicar(temaAtual);
+else {
 document.body.classList.toggle("tema-escuro", temaAtual === "escuro");
+document.body.classList.toggle("tema-claro", temaAtual === "claro");
+}
 const botaoTema = document.getElementById("botao-tema");
 if (botaoTema) {
 botaoTema.textContent = temaAtual === "claro" ? "Tema: Claro" : "Tema: Escuro";
 }
 }
+
+window.addEventListener("mindnote:theme-change", (evento) => {
+const novoTema = evento.detail?.theme;
+if (novoTema !== "claro" && novoTema !== "escuro") return;
+temaAtual = novoTema;
+definirTema(temaAtual);
+const botaoTema = document.getElementById("botao-tema");
+if (botaoTema) botaoTema.textContent = temaAtual === "claro" ? "Tema: Claro" : "Tema: Escuro";
+const editor = document.getElementById("view-editor");
+if (editor?.style.display !== "none" && Array.isArray(arvoresAtuais)) reprocessarERenderizar();
+});
 
 // ─── Exposição pública ─────────────────────────────────────────────────────────────────
 Object.assign(MindNoteApp, {
@@ -510,6 +525,13 @@ const botaoNovaRaiz = document.getElementById("botao-nova-raiz");
 const botaoExportar = document.getElementById("botao-exportar-pdf");
 const areaErro = document.getElementById("area-erro");
 const botaoVoltarHome = document.getElementById("botao-voltar-home");
+
+temaAtual = window.MindNoteTheme?.obter?.() || temaAtual;
+aplicarTemaNaInterface();
+try {
+const espacamentoSalvo = Number(localStorage.getItem("mindnote_default_line_spacing"));
+if (Number.isInteger(espacamentoSalvo) && espacamentoSalvo >= 26 && espacamentoSalvo <= 120) entradaEscala.value = String(espacamentoSalvo);
+} catch { /* mantém o padrão de 26 px */ }
 
 botaoExportar.disabled = true;
 
@@ -590,7 +612,8 @@ areaErro.textContent = erro.message;
 });
 
 botaoTema.addEventListener("click", () => {
-temaAtual = temaAtual === "claro" ? "escuro" : "claro";
+temaAtual = window.MindNoteTheme?.alternar?.() || (temaAtual === "claro" ? "escuro" : "claro");
+window.dispatchEvent(new CustomEvent("mindnote:theme-change", { detail: { theme: temaAtual } }));
 aplicarTemaNaInterface();
 reprocessarERenderizar();
 agendarAutosave();
@@ -622,7 +645,7 @@ areaErro.textContent = "Processe um JSON antes de exportar.";
 return;
 }
 try {
-exportarPDFContinuo(arvoresAtuais, temaAtual); // ← tema repassado
+    exportarPDFContinuo(arvoresAtuais, temaAtual);
 } catch (erro) {
 areaErro.textContent = `Erro na exportação: ${erro.message}`;
 }

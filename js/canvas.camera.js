@@ -9,6 +9,18 @@
 const MARGEM_FOCO = 120;
 const DURACAO_FOCO_MS = 320;
 
+function limitarEstadoZoom(svg, estado) {
+  const config = window.MindNoteSettings?.obterCanvasConfig?.() || {};
+  const dimensoes = window.MindNoteApp?.obterArvoresAtuais?.()?.[0]?.canvasDimensoes;
+  if (!dimensoes) return estado;
+  const min = Math.max(0.1, Math.min(1, Number(config.zoomMin) || 0.1));
+  const max = Math.max(1.5, Math.min(10, Number(config.zoomMax) || 4));
+  const width = Math.max(dimensoes.larguraTotal / max, Math.min(dimensoes.larguraTotal / min, estado.width));
+  const height = Math.max(dimensoes.alturaTotal / max, Math.min(dimensoes.alturaTotal / min, estado.height));
+  const cx = estado.x + estado.width / 2, cy = estado.y + estado.height / 2;
+  return { x: cx - width / 2, y: cy - height / 2, width, height };
+}
+
 function capturarEstado(svg) {
   if (!svg || !svg.viewBox || !svg.viewBox.baseVal) return null;
   const vb = svg.viewBox.baseVal;
@@ -20,7 +32,8 @@ function capturarEstado(svg) {
 
 function restaurarEstado(svg, estado) {
   if (!svg || !estado) return false;
-  const { x, y, width, height } = estado;
+  const limitado = limitarEstadoZoom(svg, estado);
+  const { x, y, width, height } = limitado;
   if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return false;
   svg.setAttribute("viewBox", `${x} ${y} ${width} ${height}`);
   return true;
@@ -60,12 +73,12 @@ function focarNo(svg, no) {
   const centroY = no.posicao.y;
   const larguraFoco = largura + MARGEM_FOCO * 2;
   const alturaFoco = altura + MARGEM_FOCO * 2;
-  const destino = {
+  const destino = limitarEstadoZoom(svg, {
     x: centroX - larguraFoco / 2,
     y: centroY - alturaFoco / 2,
     width: larguraFoco,
     height: alturaFoco,
-  };
+  });
   if (estadoAtual) {
     animarViewBox(svg, estadoAtual, destino, DURACAO_FOCO_MS);
   } else {
@@ -79,4 +92,5 @@ window.MindNoteCamera = {
   restaurarEstado,
   centralizarMapa,
   focarNo,
+  limitarEstadoZoom,
 };

@@ -14,12 +14,15 @@
     envelope.dataset.open = "true";
     envelope.setAttribute("aria-hidden", "false");
     painel.setAttribute("aria-hidden", "false");
+    atualizarMetadados();
+    window.dispatchEvent(new Event("mindnote:backstage-change"));
   }
 
   function close() {
     envelope.dataset.open = "false";
     envelope.setAttribute("aria-hidden", "true");
     painel.setAttribute("aria-hidden", "true");
+    window.dispatchEvent(new Event("mindnote:backstage-change"));
   }
 
   function atualizarMetadados() {
@@ -43,6 +46,20 @@
     var profundidadeEl = document.getElementById("meta-profundidade");
     if (totalEl) totalEl.textContent = String(total);
     if (profundidadeEl) profundidadeEl.textContent = String(profundidadeMaxima);
+    var secaoDev = document.getElementById("meta-dev-telemetry");
+    var devAtivo = window.MindNoteSettings?.devDesbloqueado?.() || false;
+    if (secaoDev) secaoDev.hidden = !devAtivo;
+    if (devAtivo) {
+      var snapshot = window.MindNoteDevTelemetry?.obterSnapshot?.() || {};
+      var fps = document.getElementById("meta-dev-fps");
+      var heap = document.getElementById("meta-dev-heap");
+      var bounds = document.getElementById("meta-dev-bounds");
+      var nodes = document.getElementById("meta-dev-nodes");
+      if (fps) fps.textContent = `${snapshot.fps ?? 0} FPS`;
+      if (heap) heap.textContent = snapshot.heapBytes == null ? "não suportado" : `${(snapshot.heapBytes / 1048576).toFixed(1)} MB`;
+      if (bounds) bounds.textContent = snapshot.bounds ? `${snapshot.bounds.width.toFixed(0)} × ${snapshot.bounds.height.toFixed(0)} px` : "—";
+      if (nodes) nodes.textContent = String(snapshot.nodes ?? total);
+    }
   }
 
   function selecionarAba(nome) {

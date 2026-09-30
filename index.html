@@ -10,25 +10,190 @@
   <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
+  <script>
+    (() => {
+      const chave = "mindnote_theme_pref";
+      const valido = (valor) => ["claro", "escuro", "sistema"].includes(valor);
+      let preferencia;
+      try { preferencia = localStorage.getItem(chave); } catch { /* armazenamento indisponível */ }
+      const resolver = (modo) => modo === "sistema"
+        ? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro")
+        : modo;
+      let modoAtual = valido(preferencia) ? preferencia : "sistema";
+      const aplicar = (tema) => {
+        const escolhido = tema === "escuro" ? "escuro" : "claro";
+        document.body.classList.toggle("tema-escuro", escolhido === "escuro");
+        document.body.classList.toggle("tema-claro", escolhido === "claro");
+        return escolhido;
+      };
+      window.MindNoteTheme = {
+        chave,
+        obterPreferencia() {
+          try { const salvo = localStorage.getItem(chave); if (valido(salvo)) return salvo; } catch { /* usa modo da sessão */ }
+          return modoAtual;
+        },
+        obter() {
+          return document.body.classList.contains("tema-escuro") ? "escuro" : "claro";
+        },
+        aplicar,
+        guardar(modo) {
+          modoAtual = valido(modo) ? modo : "sistema";
+          try { localStorage.setItem(chave, modoAtual); } catch { /* preferência vale nesta sessão */ }
+          return aplicar(resolver(modoAtual));
+        },
+        alternar() { return this.guardar(this.obter() === "escuro" ? "claro" : "escuro"); },
+      };
+      aplicar(resolver(modoAtual));
+      const consultaSistema = window.matchMedia?.("(prefers-color-scheme: dark)");
+      consultaSistema?.addEventListener?.("change", () => {
+        if (window.MindNoteTheme.obterPreferencia() === "sistema") {
+          const tema = aplicar(resolver("sistema"));
+          window.dispatchEvent(new CustomEvent("mindnote:theme-change", { detail: { theme: tema } }));
+        }
+      });
+      window.addEventListener("storage", (evento) => {
+        if (evento.key !== chave) return;
+        modoAtual = valido(evento.newValue) ? evento.newValue : "sistema";
+        const tema = aplicar(resolver(modoAtual));
+        window.dispatchEvent(new CustomEvent("mindnote:theme-change", { detail: { theme: tema } }));
+      });
+    })();
+  </script>
 
-  <section id="view-home" class="view-screen">
-    <header class="home-header">
-      <h1>Meus Mapas</h1>
+  <section id="view-home" class="view-screen" data-mindnote-ui>
+    <aside id="mn-home-sidebar" class="mn-home-sidebar" aria-label="Navegação da biblioteca">
+      <button id="mn-app-logo" class="mn-app-logo" type="button" aria-label="MindNote Engine, cinco cliques alternam o modo desenvolvedor">
+        <span id="mn-app-logo-mark" class="mn-app-logo-mark" aria-hidden="true">M</span>
+        <span class="mn-app-logo-copy"><strong>MindNote</strong><small>ENGINE <b>v2.0-rc</b></small></span>
+      </button>
+      <nav class="mn-nav-list" aria-label="Biblioteca">
+        <button class="mn-nav-item is-active" type="button" data-home-nav="todos"><span class="mn-nav-icon" aria-hidden="true">▦</span><span>Todos os Mapas</span><span id="mn-nav-total" class="mn-nav-badge">0</span></button>
+        <button class="mn-nav-item" type="button" data-home-nav="favoritos"><span class="mn-nav-icon" aria-hidden="true">☆</span><span>Favoritos</span><span id="mn-nav-favorites-count" class="mn-nav-badge">0</span></button>
+        <button class="mn-nav-item" type="button" data-home-nav="pastas"><span class="mn-nav-icon" aria-hidden="true">▤</span><span>Pastas / Cadernos</span><span class="mn-nav-chevron" aria-hidden="true">⌄</span></button>
+        <div id="mn-nav-categories" class="mn-nav-categories" hidden></div>
+        <button id="mn-nav-new-folder" class="mn-nav-new-folder" type="button"><span aria-hidden="true">＋</span> Nova pasta</button>
+      </nav>
+      <div class="mn-sidebar-spacer"></div>
+      <button id="mn-nav-settings" class="mn-nav-item mn-nav-settings" type="button" data-home-nav="settings"><span class="mn-nav-icon" aria-hidden="true">⚙</span><span>Configurações</span></button>
+      <section id="mn-cloud-status" class="mn-cloud-status" aria-label="Status de sincronização">
+        <div class="mn-cloud-heading"><span class="mn-cloud-indicator" aria-hidden="true"></span><span>Cloud Storage</span><small>BYOB</small></div>
+        <p id="mn-cloud-status-text">Sincronização não configurada</p>
+        <button id="mn-cloud-configure" type="button">Configurar conexão <span aria-hidden="true">↗</span></button>
+      </section>
+      <button id="btn-home-theme" class="mn-sidebar-theme" type="button"><span id="mn-theme-icon" aria-hidden="true">☾</span><span id="mn-theme-label">Tema Escuro</span><span class="mn-theme-switch" aria-hidden="true"><i></i></span></button>
+    </aside>
+    <div id="mn-home-main" class="mn-home-main" data-view="maps">
+    <header id="mn-home-header" class="mn-home-header">
+      <label class="mn-home-search" for="busca-mapas">
+        <span aria-hidden="true">⌕</span>
+        <input id="busca-mapas" type="search" placeholder="Buscar mapas..." autocomplete="off" aria-label="Buscar mapas" />
+        <kbd aria-hidden="true">⌘ K</kbd>
+      </label>
+      <nav class="mn-home-actions" aria-label="Ações da Home">
+        <button id="btn-home-sync" class="mn-home-button mn-home-button--quiet" type="button" title="Sincronização em breve"><span aria-hidden="true">⟳</span><span>Sincronizar</span></button>
+        <button id="btn-home-config" class="mn-home-button mn-home-button--icon" type="button" title="Configurações" aria-label="Configurações">⚙</button>
+        <div class="mn-home-create-wrap">
+          <button id="btn-novo-mapa" class="mn-home-button mn-home-button--primary" type="button" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">＋</span> Novo Mapa</button>
+          <div id="mn-home-create-menu" class="mn-home-create-menu" role="menu" hidden>
+            <button id="home-criar-branco" class="mn-home-create-item" type="button" role="menuitem">Criar Mapa em Branco</button>
+            <button id="home-importar-json" class="mn-home-create-item" type="button" role="menuitem">Importar Estrutura JSON</button>
+          </div>
+        </div>
+      </nav>
     </header>
 
-    <div id="home-estado-vazio" class="home-estado-vazio">
-      <p>Você ainda não tem mapas salvos.</p>
-      <p>Toque no botão “+” para criar o primeiro.</p>
+    <main id="mn-home-content" class="mn-home-content">
+      <section class="mn-ai-hub" aria-label="Integração de estudo com inteligência artificial">
+        <div class="mn-ai-hub-copy"><span class="mn-ai-hub-mark" aria-hidden="true">✳</span><div><p class="mn-home-eyebrow">ESTUDO COM IA</p><h2>Transforme suas fontes em mapas mentais</h2><p>Gere estruturas compatíveis com o MindNote no NotebookLM.</p></div></div>
+        <div class="mn-ai-hub-actions">
+          <button id="btn-copiar-prompt-ia" class="mn-home-button mn-home-button--quiet" type="button">Copiar Prompt de IA</button>
+          <a class="mn-home-button mn-home-button--primary" href="https://notebooklm.google.com" target="_blank" rel="noopener noreferrer">Abrir NotebookLM <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+      <div class="mn-home-section-heading">
+        <div><p class="mn-home-eyebrow">BIBLIOTECA</p><h1 id="mn-home-section-title">Seus mapas</h1></div>
+      </div>
+      <div id="grade-mapas" class="mn-home-grid" aria-live="polite"></div>
+      <div id="mn-home-empty" class="mn-home-empty" hidden>
+        <span class="mn-home-empty-icon" aria-hidden="true">✳</span>
+        <h2 id="mn-home-empty-title">Sua próxima ideia começa aqui</h2>
+        <p id="mn-home-empty-copy">Crie um mapa para organizar pensamentos, projetos e possibilidades.</p>
+        <button id="mn-home-empty-create" class="mn-home-button mn-home-button--primary" type="button"><span aria-hidden="true">＋</span> Criar meu primeiro mapa</button>
+      </div>
+    <div id="mn-settings-envelope" class="mn-settings-envelope" data-open="false" data-mode="page" aria-hidden="true" data-mindnote-ui>
+      <div id="modal-configuracoes">
+      <section id="mn-settings-page" class="mn-settings-page mn-glass--strong" aria-labelledby="mn-settings-title" aria-describedby="mn-settings-subtitle">
+        <header class="mn-settings-header">
+          <div><h2 id="mn-settings-title">Configurações</h2><p id="mn-settings-subtitle">Preferências e ferramentas do MindNote Engine</p></div>
+          <button id="btn-settings-close" class="mn-icon-button" type="button" aria-label="Fechar configurações">×</button>
+        </header>
+        <nav class="mn-settings-tabs" aria-label="Seções das configurações" role="tablist">
+          <button class="mn-settings-tab is-active" id="settings-tab-usuario" type="button" role="tab" aria-selected="true" aria-controls="tab-settings-usuario" data-tab="usuario">Usuário & Aparência</button>
+          <button class="mn-settings-tab" id="settings-tab-canvas" type="button" role="tab" aria-selected="false" aria-controls="tab-settings-canvas" data-tab="canvas" tabindex="-1">Canvas & Entrada</button>
+          <button class="mn-settings-tab" id="settings-tab-pdf" type="button" role="tab" aria-selected="false" aria-controls="tab-settings-pdf" data-tab="pdf" tabindex="-1">Exportação PDF</button>
+          <button class="mn-settings-tab" id="settings-tab-sync" type="button" role="tab" aria-selected="false" aria-controls="tab-settings-sync" data-tab="sync" tabindex="-1">Sincronização</button>
+          <button class="mn-settings-tab" id="settings-tab-dev" type="button" role="tab" aria-selected="false" aria-controls="tab-settings-dev" data-tab="dev" tabindex="-1" hidden>Desenvolvedor</button>
+        </nav>
+        <div class="mn-settings-content">
+          <section id="tab-settings-usuario" class="mn-settings-panel" role="tabpanel" aria-labelledby="settings-tab-usuario" data-panel="usuario">
+            <div class="mn-settings-section-heading"><h3>Preferências de aparência</h3><p>Personalize a experiência em todos os mapas.</p></div>
+            <label class="mn-settings-field"><span>Tema da interface</span><select id="settings-theme-select" class="mn-settings-input"><option value="claro">Claro</option><option value="escuro">Escuro</option><option value="sistema">Seguir Sistema</option></select></label>
+            <label class="mn-settings-field"><span>Variante visual</span><select id="settings-visual-variant" class="mn-settings-input"><option value="liquid">Liquid Glass · Vidro translúcido</option><option value="solid">Solid Minimalist · Clean fosco</option></select></label>
+            <label class="mn-settings-field"><span>Entrelinha padrão de caligrafia <small>px · mínimo 26</small></span><input id="settings-line-spacing" class="mn-settings-input" type="number" min="26" max="120" step="1" value="26" inputmode="numeric" /></label>
+          </section>
+          <section id="tab-settings-canvas" class="mn-settings-panel" role="tabpanel" aria-labelledby="settings-tab-canvas" data-panel="canvas" hidden>
+            <div class="mn-settings-section-heading"><h3>Canvas & Entrada</h3><p>Ajuste a resposta do mapa para gestos de caneta, toque e trackpad.</p></div>
+            <label class="mn-settings-field"><span>Sensibilidade de Pan / Zoom <output id="settings-camera-sensitivity-value">1,0×</output></span><input id="settings-camera-sensitivity" class="mn-settings-range" type="range" min="0.5" max="2" step="0.1" value="1" /></label>
+            <label class="mn-settings-check"><input id="settings-rotation-lock" type="checkbox" checked /><span><strong>Trava de rotação acidental</strong><small>Bloqueia rotação angular durante gestos multi-touch.</small></span></label>
+            <div class="mn-settings-two-fields"><label class="mn-settings-field"><span>Zoom mínimo <small>× do enquadramento</small></span><input id="settings-zoom-min" class="mn-settings-input mn-settings-touch-number" type="number" min="0.1" max="1" step="0.1" value="0.1" inputmode="decimal" /></label><label class="mn-settings-field"><span>Zoom máximo <small>× do enquadramento</small></span><input id="settings-zoom-max" class="mn-settings-input mn-settings-touch-number" type="number" min="1.5" max="10" step="0.5" value="4" inputmode="decimal" /></label></div>
+          </section>
+          <section id="tab-settings-pdf" class="mn-settings-panel" role="tabpanel" aria-labelledby="settings-tab-pdf" data-panel="pdf" hidden>
+            <div class="mn-settings-section-heading"><h3>Espelho vetorial 1:1</h3><p>O arquivo mantém a geometria, as coordenadas e os tamanhos do mapa renderizado. As dimensões acompanham o bounding box do grafo, com 40 px de respiro em cada lado.</p></div>
+          </section>
+          <section id="tab-settings-sync" class="mn-settings-panel" role="tabpanel" aria-labelledby="settings-tab-sync" data-panel="sync" hidden>
+            <div class="mn-settings-section-heading"><h3>Sincronização BYOB</h3><p>Conecte seu próprio projeto. A sincronização usa criptografia no cliente; a senha E2EE permanece neste dispositivo.</p></div>
+            <label class="mn-settings-field"><span>URL do Projeto Supabase</span><input id="sync-input-url" class="mn-settings-input" type="url" placeholder="https://xyz.supabase.co" autocomplete="url" /></label>
+            <label class="mn-settings-field"><span>Chave Pública Anon</span><span class="mn-settings-secret-wrap"><input id="sync-input-key" class="mn-settings-input" type="password" autocomplete="off" /><button id="sync-toggle-key" class="mn-settings-reveal" type="button" aria-label="Mostrar chave pública">Mostrar</button></span></label>
+            <label class="mn-settings-field"><span>Senha de Criptografia E2EE</span><span class="mn-settings-secret-wrap"><input id="sync-input-senha" class="mn-settings-input" type="password" autocomplete="new-password" /><button id="sync-toggle-senha" class="mn-settings-reveal" type="button" aria-label="Mostrar senha de criptografia">Mostrar</button></span></label>
+            <p class="mn-settings-note">As credenciais ficam armazenadas localmente neste navegador. A senha nunca é enviada ao servidor.</p>
+            <button id="btn-salvar-sync" class="mn-home-button mn-home-button--primary mn-settings-submit" type="button">Salvar Credenciais</button>
+            <button id="btn-testar-sync" class="mn-home-button mn-home-button--quiet mn-settings-action" type="button">Testar Conexão</button>
+            <p id="settings-sync-status" class="mn-settings-feedback" role="status" aria-live="polite">Não testada nesta sessão.</p>
+            <p class="mn-settings-policy"><strong>Política de conflito:</strong> Last-Write-Wins por timestamp. Em caso de alteração simultânea, prevalece a versão com data de modificação mais recente.</p>
+            <p id="settings-sync-feedback" class="mn-settings-feedback" role="status" aria-live="polite"></p>
+          </section>
+          <section id="tab-settings-dev" class="mn-settings-panel" role="tabpanel" aria-labelledby="settings-tab-dev" data-panel="dev" hidden>
+            <div class="mn-settings-section-heading"><h3>Dados locais</h3><p>Diagnóstico e ferramentas para seus mapas armazenados neste navegador.</p></div>
+            <div class="mn-settings-metrics"><div><span>Metas · maps_meta</span><strong id="settings-map-count">—</strong></div><div><span>Mapas · maps_data</span><strong id="settings-record-count">—</strong></div><div><span>Miniaturas · maps_thumbnails</span><strong id="settings-thumb-count">—</strong></div><div><span>Pastas · maps_categories</span><strong id="settings-category-count">—</strong></div></div>
+            <p id="settings-db-version" class="mn-settings-note">Banco local: carregando diagnóstico…</p>
+            <p id="settings-storage-estimate" class="mn-settings-note">Armazenamento estimado: consultando navegador…</p>
+            <p id="settings-memory-diagnostic" class="mn-settings-note">Heap: — · Nós no grafo ativo: —</p>
+            <label class="mn-settings-check"><input id="settings-hitboxes" type="checkbox" /><span><strong>Exibir Hitboxes</strong><small>Sobrepõe as áreas de toque do canvas com ciano translúcido.</small></span></label>
+            <label class="mn-settings-check"><input id="settings-hud-enabled" type="checkbox" /><span><strong>HUD de telemetria no Editor</strong><small>Exibe FPS, heap e contagem de nós no canto inferior do canvas.</small></span></label>
+            <div class="mn-settings-dev-fps"><span>Monitor FPS / atualização</span><strong id="settings-fps-value">—</strong></div>
+            <button id="btn-backup-exportar" class="mn-home-button mn-home-button--quiet mn-settings-action" type="button">Exportar Backup Completo (JSON)</button>
+            <input id="input-backup-importar" type="file" accept="application/json,.json" hidden />
+            <button id="btn-backup-importar" class="mn-home-button mn-home-button--quiet mn-settings-action" type="button">Restaurar Backup (JSON)</button>
+            <p id="settings-backup-feedback" class="mn-settings-feedback" role="status" aria-live="polite"></p>
+            <div class="mn-settings-danger-zone"><div><h3>Zona de Perigo</h3><p>Remove permanentemente todos os mapas deste navegador.</p></div><button id="btn-backup-reset" class="mn-settings-danger-button" type="button">Resetar Banco de Dados</button></div>
+          </section>
+        </div>
+      </section>
+      </div>
+    </div>
+    <div id="mn-dev-toast" class="mn-dev-toast" data-show="false" role="status" aria-live="polite"></div>
+    </main>
+
+    <div id="mn-home-import-modal" class="mn-home-modal" role="presentation" hidden>
+      <section class="mn-home-modal-panel" role="dialog" aria-modal="true" aria-labelledby="mn-home-modal-title">
+        <header class="mn-home-modal-header"><div><p class="mn-home-eyebrow">IMPORTAÇÃO</p><h2 id="mn-home-modal-title">Importar estrutura JSON</h2></div><button id="mn-home-modal-close" class="mn-home-button mn-home-button--icon" type="button" aria-label="Fechar">×</button></header>
+        <p class="mn-home-modal-help">Cole uma árvore MindNote. Cada nó precisa de <code>titulo</code>, <code>anotacao</code>, <code>cor</code> e <code>filhos</code>.</p>
+        <textarea id="mn-home-json-input" class="mn-home-json-input" rows="12" spellcheck="false" placeholder='{"titulo":"Tema","anotacao":null,"cor":null,"filhos":[]}'></textarea>
+        <p id="mn-home-import-error" class="mn-home-import-error" role="alert" hidden></p>
+        <footer class="mn-home-modal-actions"><button id="mn-home-import-cancel" class="mn-home-button mn-home-button--quiet" type="button">Cancelar</button><button id="mn-home-import-confirm" class="mn-home-button mn-home-button--primary" type="button">Validar e importar</button></footer>
+      </section>
     </div>
 
-    <div id="home-grade-cartoes" class="home-grade-cartoes"></div>
-
-    <div class="home-botao-flutuante-container">
-      <div id="home-menu-novo" class="home-menu-novo">
-        <button id="home-opcao-criar-zero" type="button" class="home-menu-novo-item">Criar do Zero</button>
-        <button id="home-opcao-importar" type="button" class="home-menu-novo-item">Importar JSON</button>
-      </div>
-      <button id="home-botao-novo" type="button" class="home-botao-flutuante" aria-label="Novo mapa">+</button>
     </div>
   </section>
 
@@ -97,6 +262,12 @@
                 <div class="mn-property-content" style="padding-top: 12px;">
                   <div class="mn-meta-row"><span>Total de Nós</span><span id="meta-total-nos" class="mn-meta-value">0</span></div>
                   <div class="mn-meta-row"><span>Profundidade Máxima</span><span id="meta-profundidade" class="mn-meta-value">0</span></div>
+                  <section id="meta-dev-telemetry" class="mn-meta-telemetry" hidden aria-label="Telemetria do desenvolvedor">
+                    <div class="mn-meta-row"><span>FPS</span><span id="meta-dev-fps" class="mn-meta-value">—</span></div>
+                    <div class="mn-meta-row"><span>Heap</span><span id="meta-dev-heap" class="mn-meta-value">—</span></div>
+                    <div class="mn-meta-row"><span>Bounding Box</span><span id="meta-dev-bounds" class="mn-meta-value">—</span></div>
+                    <div class="mn-meta-row"><span>Nós ativos</span><span id="meta-dev-nodes" class="mn-meta-value">0</span></div>
+                  </section>
                 </div>
               </div>
             </div>
@@ -119,6 +290,8 @@
   <script src="js/parser.diagnostics.js"></script>
   <!-- Fase 2 (v2.0): roteador SPA e Home Dashboard — devem vir antes de app.js -->
   <script src="js/app.router.js"></script>
+  <script src="js/settings.manager.js"></script>
+  <script src="js/home.sidebar.js"></script>
   <script src="js/home.dashboard.js"></script>
   <!-- Fase 3 (v2.0): estabilização de câmera e Zoom Dock — devem vir antes de app.js -->
   <script src="js/canvas.camera.js"></script>

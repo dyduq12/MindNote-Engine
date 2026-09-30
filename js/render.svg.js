@@ -260,6 +260,8 @@ function criarInteracaoViewport(svg, root, d) {
     inicial: { width: d.larguraTotal, height: d.alturaTotal },
     pointers: new Map(),
     distanciaAnterior: null,    // ← incremental; NÃO é mais um viewBox congelado
+    anguloAnterior: null,
+    rotacao: 0,
   };
 
   // Fase 3.4 (fix): sincroniza o cache interno de viewBox com o DOM real a
@@ -279,6 +281,10 @@ function criarInteracaoViewport(svg, root, d) {
   const aplicar = () => {
     const v = estado.viewBox;
     svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.width} ${v.height}`);
+    const centroX = v.x + v.width / 2;
+    const centroY = v.y + v.height / 2;
+    if (Math.abs(estado.rotacao) > 0.01) root.setAttribute('transform', `rotate(${estado.rotacao} ${centroX} ${centroY})`);
+    else root.removeAttribute('transform');
   };
 
   const limitar = () => {
@@ -310,8 +316,19 @@ function criarInteracaoViewport(svg, root, d) {
     const px = estado.viewBox.x + u * estado.viewBox.width;
     const py = estado.viewBox.y + v * estado.viewBox.height;
 
-    const novoW = Math.max(160, Math.min(estado.inicial.width * 4, estado.viewBox.width * fator));
-    const novoH = Math.max(160, Math.min(estado.inicial.height * 4, estado.viewBox.height * fator));
+    const config = window.MindNoteSettings?.obterCanvasConfig?.() || {};
+    const minZoom = Math.max(0.1, Math.min(1, Number(config.zoomMin) || 0.1));
+    const maxZoom = Math.max(minZoom + 0.1, Math.min(10, Number(config.zoomMax) || 4));
+    // Magnification limits are inverse to viewBox dimensions: lower zoom means
+    // a wider viewBox (zooming out), while higher zoom means a narrower one.
+    const minW = estado.inicial.width / maxZoom;
+    const minH = estado.inicial.height / maxZoom;
+    const maxW = estado.inicial.width / minZoom;
+    const maxH = estado.inicial.height / minZoom;
+    const sensibilidade = Math.max(0.5, Math.min(2, Number(config.sensibilidade) || 1));
+    const fatorSensivel = Math.pow(fator, sensibilidade);
+    const novoW = Math.max(minW, Math.min(maxW, estado.viewBox.width * fatorSensivel));
+    const novoH = Math.max(minH, Math.min(maxH, estado.viewBox.height * fatorSensivel));
 
     estado.viewBox.x = px - u * novoW;
     estado.viewBox.y = py - v * novoH;
@@ -343,6 +360,7 @@ function criarInteracaoViewport(svg, root, d) {
     if (estado.pointers.size === 2) {
       const [a, b] = [...estado.pointers.values()];
       estado.distanciaAnterior = distancia(a, b);
+      estado.anguloAnterior = Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
     }
   });
 
@@ -363,8 +381,9 @@ function criarInteracaoViewport(svg, root, d) {
       const inv = svg.getScreenCTM().inverse();
       const antes = new DOMPoint(anterior.clientX, anterior.clientY).matrixTransform(inv);
       const atual = new DOMPoint(e.clientX,        e.clientY       ).matrixTransform(inv);
-      estado.viewBox.x += antes.x - atual.x;
-      estado.viewBox.y += antes.y - atual.y;
+      const sensibilidade = window.MindNoteSettings?.obterCanvasConfig?.().sensibilidade || 1;
+      estado.viewBox.x += (antes.x - atual.x) * sensibilidade;
+      estado.viewBox.y += (antes.y - atual.y) * sensibilidade;
       limitar();
       aplicar();
       return;
@@ -373,11 +392,24 @@ function criarInteracaoViewport(svg, root, d) {
     // Pinch-to-zoom INCREMENTAL: fator = distAnt / distAtual (frame-a-frame)
     const [a, b] = [...estado.pointers.values()];
     const distAtual = distancia(a, b);
+    const configGestos = window.MindNoteSettings?.obterCanvasConfig?.() || {};
     if (estado.distanciaAnterior !== null && distAtual > 0) {
       const fator = estado.distanciaAnterior / distAtual;
       aplicarZoom(fator, centro(a, b));
     }
     estado.distanciaAnterior = distAtual;
+    const anguloAtual = Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+    if (configGestos.travarRotacao !== true && estado.anguloAnterior !== null) {
+      let delta = anguloAtual - estado.anguloAnterior;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      estado.rotacao += delta * 180 / Math.PI;
+      aplicar();
+    } else if (configGestos.travarRotacao === true && estado.rotacao !== 0) {
+      estado.rotacao = 0;
+      aplicar();
+    }
+    estado.anguloAnterior = anguloAtual;
   });
 
   // ── pointerup / pointercancel: libera e zera distância anterior ────────────
@@ -389,7 +421,7 @@ function criarInteracaoViewport(svg, root, d) {
     estado.pointers.delete(e.pointerId);
     window.dispatchEvent(new CustomEvent('mindnote:canvas-interaction', { detail: { phase: 'end', type: 'pan' } }));
     // Ao soltar qualquer dedo do pinch, reinicializa distância
-    if (estado.pointers.size < 2) estado.distanciaAnterior = null;
+    if (estado.pointers.size < 2) { estado.distanciaAnterior = null; estado.anguloAnterior = null; }
   };
   svg.addEventListener('pointerup', liberar);
   svg.addEventListener('pointercancel', liberar);

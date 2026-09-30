@@ -14,10 +14,11 @@
 
 const MindNoteDB = (() => {
   const NOME_BANCO = "MindNoteDB";
-  const VERSAO_BANCO = 1;
+  const VERSAO_BANCO = 2;
   const STORE_META = "maps_meta";
   const STORE_THUMB = "maps_thumbnails";
   const STORE_DATA = "maps_data";
+  const STORE_CATEGORY = "maps_categories";
 
   let dbPromise = null;
 
@@ -36,6 +37,19 @@ const MindNoteDB = (() => {
         }
         if (!db.objectStoreNames.contains(STORE_DATA)) {
           db.createObjectStore(STORE_DATA, { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains(STORE_CATEGORY)) {
+          db.createObjectStore(STORE_CATEGORY, { keyPath: "id" });
+          const categorias = evento.target.transaction.objectStore(STORE_CATEGORY);
+          const metas = evento.target.transaction.objectStore(STORE_META);
+          const cursor = metas.openCursor();
+          cursor.onsuccess = () => {
+            const atual = cursor.result;
+            if (!atual) return;
+            const nome = typeof atual.value.categoria === "string" ? atual.value.categoria.trim() : "";
+            if (nome) categorias.put({ id: nome.toLocaleLowerCase("pt-BR"), nome, dataCriacao: Date.now() });
+            atual.continue();
+          };
         }
       };
 
@@ -103,6 +117,8 @@ const MindNoteDB = (() => {
       dataModificacao: agora,
       tema: tema === "escuro" ? "escuro" : "claro",
       totalNos: contarNosArvores(arvores),
+      favorito: metaExistente?.favorito === true,
+      categoria: typeof metaExistente?.categoria === "string" && metaExistente.categoria.trim() ? metaExistente.categoria.trim() : null,
     };
 
     storeMeta.put(meta);
@@ -159,6 +175,80 @@ const MindNoteDB = (() => {
     return true;
   }
 
+  async function atualizarOrganizacao(id, alteracoes = {}) {
+    const tx = await transacao([STORE_META], "readwrite");
+    const store = tx.objectStore(STORE_META);
+    const meta = await promisificarRequest(store.get(id));
+    if (!meta) {
+      tx.abort();
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(alteracoes, "favorito")) meta.favorito = alteracoes.favorito === true;
+    if (Object.prototype.hasOwnProperty.call(alteracoes, "categoria")) {
+      const categoria = typeof alteracoes.categoria === "string" ? alteracoes.categoria.trim() : "";
+      meta.categoria = categoria || null;
+    }
+    store.put(meta);
+    await promisificarTransacao(tx);
+    return meta;
+  }
+
+  async function listarCategorias() {
+    const tx = await transacao([STORE_CATEGORY], "readonly");
+    const categorias = await promisificarRequest(tx.objectStore(STORE_CATEGORY).getAll());
+    return categorias.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }
+
+  async function criarCategoria(nome) {
+    const titulo = String(nome || "").trim();
+    if (!titulo) return null;
+    const id = titulo.toLocaleLowerCase("pt-BR");
+    const tx = await transacao([STORE_CATEGORY], "readwrite");
+    const store = tx.objectStore(STORE_CATEGORY);
+    const existente = await promisificarRequest(store.get(id));
+    const categoria = existente || { id, nome: titulo, dataCriacao: Date.now() };
+    if (!existente) store.put(categoria);
+    await promisificarTransacao(tx);
+    return categoria;
+  }
+
+  async function removerCategoria(id) {
+    const tx = await transacao([STORE_CATEGORY, STORE_META], "readwrite");
+    const storeMetas = tx.objectStore(STORE_META);
+    const categoria = await promisificarRequest(tx.objectStore(STORE_CATEGORY).get(id));
+    if (categoria) {
+      const metas = await promisificarRequest(storeMetas.getAll());
+      metas.filter((meta) => meta.categoria === categoria.nome).forEach((meta) => {
+        meta.categoria = null;
+        storeMetas.put(meta);
+      });
+      tx.objectStore(STORE_CATEGORY).delete(id);
+    }
+    await promisificarTransacao(tx);
+    return Boolean(categoria);
+  }
+
+  async function limparBanco() {
+    const tx = await transacao([STORE_META, STORE_THUMB, STORE_DATA, STORE_CATEGORY], "readwrite");
+    tx.objectStore(STORE_META).clear();
+    tx.objectStore(STORE_THUMB).clear();
+    tx.objectStore(STORE_DATA).clear();
+    tx.objectStore(STORE_CATEGORY).clear();
+    await promisificarTransacao(tx);
+  }
+
+  async function obterDiagnostico() {
+    const db = await abrirBanco();
+    const nomes = [STORE_META, STORE_DATA, STORE_THUMB, STORE_CATEGORY];
+    const tx = db.transaction(nomes, "readonly");
+    const contagens = await Promise.all(nomes.map((nome) => promisificarRequest(tx.objectStore(nome).count())));
+    return {
+      nome: NOME_BANCO,
+      versao: db.version,
+      stores: Object.fromEntries(nomes.map((nome, indice) => [nome, contagens[indice]])),
+    };
+  }
+
   return {
     salvarMapa,
     listarMetas,
@@ -166,6 +256,12 @@ const MindNoteDB = (() => {
     carregarThumbnail,
     duplicarMapa,
     eliminarMapa,
+    atualizarOrganizacao,
+    obterDiagnostico,
+    listarCategorias,
+    criarCategoria,
+    removerCategoria,
+    limparBanco,
     gerarUUID,
   };
 })();

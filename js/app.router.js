@@ -22,6 +22,10 @@ const MindNoteRouter = (() => {
     viewEditor = document.getElementById("view-editor");
   }
 
+  function exibir(elemento) {
+    elemento.style.display = elemento.id === "view-home" ? "grid" : "flex";
+  }
+
   function aplicarTransicao(elementoQueSai, elementoQueEntra, aoConcluir) {
     if (!elementoQueEntra) {
       aoConcluir?.();
@@ -29,7 +33,7 @@ const MindNoteRouter = (() => {
     }
 
     if (!elementoQueSai || elementoQueSai === elementoQueEntra) {
-      elementoQueEntra.style.display = "flex";
+      exibir(elementoQueEntra);
       aoConcluir?.();
       return;
     }
@@ -40,7 +44,7 @@ const MindNoteRouter = (() => {
       elementoQueSai.style.display = "none";
       elementoQueSai.classList.remove("view-saindo");
 
-      elementoQueEntra.style.display = "flex";
+      exibir(elementoQueEntra);
       elementoQueEntra.classList.add("view-entrando");
 
       requestAnimationFrame(() => {
@@ -54,6 +58,8 @@ const MindNoteRouter = (() => {
   }
 
   function navegarPara(destino, id) {
+    const temaPreferido = window.MindNoteTheme?.obter?.();
+    if (temaPreferido) window.MindNoteTheme?.aplicar?.(temaPreferido);
     if (!viewHome || !viewEditor) obterElementos();
 
     if (destino === "home") {

@@ -21,8 +21,17 @@ function aplicarZoomComFator(fator) {
   svg._sincronizarCamera?.();
   const estado = window.MindNoteCamera?.capturarEstado(svg);
   if (!estado) return false;
-  const novaLargura = estado.width * fator;
-  const novaAltura = estado.height * fator;
+  const config = window.MindNoteSettings?.obterCanvasConfig?.() || {};
+  const arvores = window.MindNoteApp?.obterArvoresAtuais?.() || [];
+  const dimensoes = arvores[0]?.canvasDimensoes;
+  const zoomMin = Math.max(.1, Math.min(1, Number(config.zoomMin) || .1));
+  const zoomMax = Math.max(1.5, Math.min(10, Number(config.zoomMax) || 4));
+  const referenciaW = dimensoes?.larguraTotal || estado.width;
+  const referenciaH = dimensoes?.alturaTotal || estado.height;
+  const sensibilidade = Math.max(.5, Math.min(2, Number(config.sensibilidade) || 1));
+  const fatorSensivel = Math.pow(fator, sensibilidade);
+  const novaLargura = Math.max(referenciaW / zoomMax, Math.min(referenciaW / zoomMin, estado.width * fatorSensivel));
+  const novaAltura = Math.max(referenciaH / zoomMax, Math.min(referenciaH / zoomMin, estado.height * fatorSensivel));
   const centroX = estado.x + estado.width / 2;
   const centroY = estado.y + estado.height / 2;
   const novoEstado = {
@@ -46,7 +55,7 @@ function escalaReal() {
   const vb = svg.viewBox.baseVal;
   const cx = vb.x + vb.width / 2;
   const cy = vb.y + vb.height / 2;
-  svg.setAttribute("viewBox", `${cx - w / 2} ${cy - h / 2} ${w} ${h}`);
+  window.MindNoteCamera?.restaurarEstado(svg, { x: cx - w / 2, y: cy - h / 2, width: w, height: h });
   svg._sincronizarCamera?.();
   return true;
 }
