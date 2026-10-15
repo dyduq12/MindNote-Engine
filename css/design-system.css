@@ -1262,6 +1262,29 @@ body[data-inspector-aberto="true"] #zoom-dock {
   background: radial-gradient(ellipse at 48% -24%, rgba(107, 75, 185, .24), transparent 55%), #101116;
   font-family: var(--mn-font-sans, system-ui, sans-serif);
 }
+[data-mindnote-ui]#view-config {
+  --mn-home-ink: #f4f3fa;
+  --mn-home-muted: #a4a1b3;
+  --mn-home-line: rgba(255,255,255,.11);
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 248px minmax(0,1fr);
+  width: 100%;
+  height: 100dvh;
+  min-height: 560px;
+  overflow: hidden;
+  color: var(--mn-home-ink);
+  background: radial-gradient(ellipse at 48% -24%, rgba(107,75,185,.24), transparent 55%), #101116;
+  font-family: var(--mn-font-sans,system-ui,sans-serif);
+}
+[data-mindnote-ui]#view-config[hidden] { display: none !important; }
+[data-mindnote-ui]#view-config [hidden] { display: none !important; }
+[data-mindnote-ui]#view-config .mn-config-main { min-width: 0; min-height: 0; overflow: hidden; padding: 0; }
+[data-mindnote-ui] .mn-config-sidebar .mn-app-logo { cursor: default; }
+[data-mindnote-ui] .mn-config-sidebar .mn-nav-item[aria-current="page"] { cursor: default; }
+[data-mindnote-ui] .mn-config-sidebar .mn-sidebar-theme > span:first-child { color: #c6b4ff; font-size: 16px; }
+[data-mindnote-ui]#view-config .mn-settings-envelope[data-mode="page"] .mn-settings-page { border-radius: 0; }
 [data-mindnote-ui]#view-home [hidden] { display: none !important; }
 [data-mindnote-ui] .mn-home-header {
   display: grid;
@@ -1434,7 +1457,8 @@ body[data-inspector-aberto="true"] #zoom-dock {
 [data-mindnote-ui] .mn-card-menu {
   position: absolute;
   z-index: 45;
-  top: calc(100% - 56px);
+  top: auto;
+  bottom: 58px;
   right: 12px;
   display: flex;
   flex-direction: column;
@@ -1520,6 +1544,7 @@ body[data-inspector-aberto="true"] #zoom-dock {
 [data-mindnote-ui] .mn-ai-hub-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 [data-mindnote-ui] .mn-ai-hub-actions a { text-decoration: none; }
 [data-mindnote-ui] #btn-copiar-prompt-ia.is-copied { border-color: rgba(110,231,183,.25); color: #a7f3d0; background: rgba(16,185,129,.12); }
+[data-mindnote-ui] #btn-copy-master-prompt.is-copied { border-color: rgba(110,231,183,.35); color: #a7f3d0; background: rgba(16,185,129,.15); transform: scale(.98); }
 [data-mindnote-ui] .mn-home-modal {
   position: fixed;
   z-index: 500;
@@ -1571,6 +1596,13 @@ body.tema-claro [data-mindnote-ui]#view-home {
   --mn-home-line: rgba(49,43,68,.14);
   color: #242230;
   background: radial-gradient(ellipse at 48% -24%, rgba(160,132,220,.2), transparent 55%), #f5f4f8;
+}
+body.tema-claro [data-mindnote-ui]#view-config {
+  --mn-home-ink: #242230;
+  --mn-home-muted: #6d687a;
+  --mn-home-line: rgba(49,43,68,.14);
+  color: #242230;
+  background: radial-gradient(ellipse at 48% -24%, rgba(139,92,246,.12), transparent 55%), #f6f5f8;
 }
 body.tema-claro [data-mindnote-ui] .mn-home-brand-mark { color: #5e40a0; background: linear-gradient(145deg, rgba(156,119,247,.2), rgba(94,73,151,.08)); box-shadow: inset 0 1px #fff, 0 8px 24px rgba(46,37,69,.08); }
 body.tema-claro [data-mindnote-ui] .mn-home-brand small { color: #777184; }
@@ -1691,6 +1723,54 @@ body.tema-claro [data-mindnote-ui] #btn-copiar-prompt-ia.is-copied { color: #087
 [data-mindnote-ui] .mn-settings-danger-zone p { max-width: 200px; margin: 5px 0 0; color: rgba(255,255,255,.49); font: 10px/1.5 var(--mn-font-sans, system-ui, sans-serif); }
 [data-mindnote-ui] .mn-settings-danger-button { flex: 0 0 auto; min-height: 36px; padding: 0 11px; border: 1px solid rgba(248,113,113,.32); border-radius: 999px; color: #ff9ba3; background: rgba(127,29,29,.18); font: 550 10px var(--mn-font-sans, system-ui, sans-serif); cursor: pointer; }
 [data-mindnote-ui] .mn-settings-danger-button:hover { background: rgba(185,28,28,.3); }
+[data-mindnote-ui] .mn-settings-section { margin: 0 0 22px; padding: 18px; border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: rgba(255,255,255,.025); }
+[data-mindnote-ui] .mn-settings-section-heading h4 { margin: 0; color: #f0eef6; font: 620 13px/1.35 var(--mn-font-sans,system-ui,sans-serif); }
+[data-mindnote-ui] .mn-settings-section-heading output { margin-left: 6px; color: var(--mn-action-primary,#8b5cf6); font-variant-numeric: tabular-nums; }
+[data-mindnote-ui] .mn-segmented { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(0,0,0,.16); }
+[data-mindnote-ui] .mn-segmented button { flex: 1 1 110px; min-height: var(--mn-control-touch,44px); padding: 7px 14px; border: 0; border-radius: 10px; color: rgba(255,255,255,.68); background: transparent; font: 550 12px var(--mn-font-sans,system-ui,sans-serif); cursor: pointer; touch-action: manipulation; }
+[data-mindnote-ui] .mn-segmented button.is-selected { color: #fff; background: var(--mn-action-primary,#8b5cf6); box-shadow: 0 4px 14px color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 32%,transparent); }
+[data-mindnote-ui] .mn-radio-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+[data-mindnote-ui] .mn-radio-grid--2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+[data-mindnote-ui] .mn-radio-card { display: flex; min-width: 0; min-height: 144px; flex-direction: column; align-items: flex-start; gap: 7px; padding: 15px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; color: #f3f1f8; text-align: left; background: rgba(255,255,255,.035); cursor: pointer; touch-action: manipulation; transition: border-color 140ms ease,background 140ms ease,transform 140ms ease; }
+[data-mindnote-ui] .mn-radio-card:hover { border-color: color-mix(in srgb,var(--mn-border-focus,#8b5cf6) 60%,transparent); background: rgba(255,255,255,.07); }
+[data-mindnote-ui] .mn-radio-card:active { transform: scale(.985); }
+[data-mindnote-ui] .mn-radio-card.is-selected { border-color: var(--mn-border-focus,#8b5cf6); background: color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 13%,transparent); box-shadow: 0 0 0 2px color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 20%,transparent); }
+[data-mindnote-ui] .mn-radio-card strong { font-size: 12px; }
+[data-mindnote-ui] .mn-radio-card small { color: rgba(255,255,255,.56); font: 10px/1.45 var(--mn-font-sans,system-ui,sans-serif); }
+[data-mindnote-ui] .mn-radio-card-art { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; color: var(--mn-action-primary,#8b5cf6); background: color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 15%,transparent); font-size: 23px; }
+[data-mindnote-ui] .mn-radio-card-art--glass { border: 1px solid rgba(255,255,255,.2); background: linear-gradient(135deg,rgba(255,255,255,.3),color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 30%,transparent)); backdrop-filter: blur(7px); }
+[data-mindnote-ui] .mn-radio-card-art--solid { border: 1px solid rgba(255,255,255,.14); background: #292a34; }
+[data-mindnote-ui] .mn-layout-mini { display: block; width: 100%; max-width: 140px; height: 54px; margin: 0 auto 4px; overflow: visible; }
+[data-mindnote-ui] .mn-layout-mini path { fill: none; stroke: var(--mn-action-primary,#8b5cf6); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+[data-mindnote-ui] .mn-layout-mini rect, [data-mindnote-ui] .mn-layout-mini circle { fill: color-mix(in srgb,var(--mn-action-primary,#8b5cf6) 20%,transparent); stroke: var(--mn-action-primary,#8b5cf6); stroke-width: 1.3; }
+[data-mindnote-ui] .mn-prompt-preview { box-sizing: border-box; max-height: 340px; overflow: auto; margin: 14px 0; padding: 16px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; color: #d9d3e8; background: rgba(8,10,17,.7); font: 11px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace; white-space: pre-wrap; overflow-wrap: anywhere; overscroll-behavior: contain; }
+[data-mindnote-ui] .mn-prompt-preview:focus-visible { outline: 2px solid var(--mn-border-focus,#8b5cf6); outline-offset: 2px; }
+[data-mindnote-ui] .mn-swatch-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+[data-mindnote-ui] .mn-color-swatch { width: 48px; height: 48px; padding: 0; border: 3px solid transparent; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 1px rgba(255,255,255,.38),0 4px 12px rgba(0,0,0,.22); cursor: pointer; touch-action: manipulation; }
+[data-mindnote-ui] .mn-color-swatch[data-color="#8B5CF6"] { --swatch:#8B5CF6; } [data-mindnote-ui] .mn-color-swatch[data-color="#3B82F6"] { --swatch:#3B82F6; } [data-mindnote-ui] .mn-color-swatch[data-color="#06B6D4"] { --swatch:#06B6D4; } [data-mindnote-ui] .mn-color-swatch[data-color="#22C55E"] { --swatch:#22C55E; } [data-mindnote-ui] .mn-color-swatch[data-color="#F59E0B"] { --swatch:#F59E0B; } [data-mindnote-ui] .mn-color-swatch[data-color="#EC4899"] { --swatch:#EC4899; }
+[data-mindnote-ui] .mn-color-swatch.is-selected { border-color: white; outline: 2px solid var(--mn-border-focus,#8b5cf6); outline-offset: 2px; }
+[data-mindnote-ui] .mn-stepper { display: flex; width: min(100%,260px); gap: 8px; }
+[data-mindnote-ui] .mn-stepper button { width: 48px; min-height: 48px; border: 1px solid rgba(255,255,255,.13); border-radius: 12px; color: #fff; background: rgba(255,255,255,.07); font-size: 22px; cursor: pointer; touch-action: manipulation; }
+[data-mindnote-ui] .mn-stepper input { text-align: center; font-variant-numeric: tabular-nums; }
+[data-mindnote-ui] .mn-settings-section .mn-settings-field { margin-bottom: 0; }
+[data-mindnote-ui] .mn-settings-section .mn-settings-field + .mn-settings-field { margin-top: 20px; }
+[data-mindnote-ui] .mn-preview-box { overflow: hidden; padding: 18px; border: 1px solid rgba(255,255,255,.11); border-radius: 18px; background: rgba(255,255,255,.035); }
+[data-mindnote-ui] .mn-preview-box svg { display: block; width: min(100%,520px); height: auto; margin: 0 auto; overflow: visible; color: #f3f1f8; }
+[data-mindnote-ui] .mn-preview-box { --mn-preview-paper:#24252e; --mn-preview-ink:#eceaf2; }
+[data-mindnote-ui] .mn-settings-section .mn-settings-range { min-height: 32px; accent-color: var(--mn-action-primary,#8b5cf6); touch-action: pan-x; }
+[data-mindnote-ui] .mn-settings-check input:is(#settings-lock-rotation,#settings-strict-stylus,#settings-pdf-render-lines,#settings-pdf-embed-metadata,#settings-anti-chatter,#settings-multi-modal-json,#settings-markdown-outline) { appearance: none; position: relative; flex: 0 0 48px; width: 48px; height: 28px; margin: 0 4px 0 0; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: rgba(255,255,255,.12); cursor: pointer; transition: background 150ms ease,border-color 150ms ease; }
+[data-mindnote-ui] .mn-settings-check input:is(#settings-lock-rotation,#settings-strict-stylus,#settings-pdf-render-lines,#settings-pdf-embed-metadata,#settings-anti-chatter,#settings-multi-modal-json,#settings-markdown-outline)::before { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform 150ms ease; }
+[data-mindnote-ui] .mn-settings-check input:is(#settings-lock-rotation,#settings-strict-stylus,#settings-pdf-render-lines,#settings-pdf-embed-metadata,#settings-anti-chatter,#settings-multi-modal-json,#settings-markdown-outline):checked { border-color: var(--mn-action-primary,#8b5cf6); background: var(--mn-action-primary,#8b5cf6); }
+[data-mindnote-ui] .mn-settings-check input:is(#settings-lock-rotation,#settings-strict-stylus,#settings-pdf-render-lines,#settings-pdf-embed-metadata,#settings-anti-chatter,#settings-multi-modal-json,#settings-markdown-outline):checked::before { transform: translateX(20px); }
+body.tema-claro [data-mindnote-ui] .mn-settings-section, body.tema-claro [data-mindnote-ui] .mn-preview-box { border-color: rgba(49,43,68,.11); background: rgba(49,43,68,.025); }
+body.tema-claro [data-mindnote-ui] .mn-settings-section-heading h4, body.tema-claro [data-mindnote-ui] .mn-radio-card { color: #292638; }
+body.tema-claro [data-mindnote-ui] .mn-radio-card { border-color: rgba(49,43,68,.13); background: rgba(49,43,68,.025); }
+body.tema-claro [data-mindnote-ui] .mn-radio-card small { color: #706a7d; }
+body.tema-claro [data-mindnote-ui] .mn-segmented { border-color: rgba(49,43,68,.12); background: rgba(49,43,68,.045); }
+body.tema-claro [data-mindnote-ui] .mn-segmented button { color: #625d70; }
+body.tema-claro [data-mindnote-ui] .mn-segmented button.is-selected { color:#fff; }
+body.tema-claro [data-mindnote-ui] .mn-preview-box { --mn-preview-paper:#fff; --mn-preview-ink:#34313d; }
+body.tema-claro [data-mindnote-ui] .mn-prompt-preview { border-color: rgba(49,43,68,.13); color: #e8e3f1; }
 [data-mindnote-ui] .mn-settings-envelope :is(button, input, select):focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
 @media (max-width: 560px) {
   [data-mindnote-ui] .mn-settings-header { padding: 19px 18px 15px; }
@@ -1699,6 +1779,8 @@ body.tema-claro [data-mindnote-ui] #btn-copiar-prompt-ia.is-copied { color: #087
   [data-mindnote-ui] .mn-settings-tab { padding: 0 5px; font-size: 10px; }
   [data-mindnote-ui] .mn-settings-danger-zone { align-items: flex-start; flex-direction: column; }
 }
+@media (max-width: 900px) { [data-mindnote-ui] .mn-radio-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 480px) { [data-mindnote-ui] .mn-radio-grid, [data-mindnote-ui] .mn-radio-grid--2 { grid-template-columns: 1fr; } [data-mindnote-ui] .mn-radio-card { min-height: 116px; } [data-mindnote-ui] .mn-settings-section { padding: 14px; } }
 @media (prefers-reduced-motion: reduce) {
   [data-mindnote-ui] .mn-settings-envelope,
   [data-mindnote-ui] .mn-settings-page,
@@ -1843,11 +1925,15 @@ body.tema-claro [data-mindnote-ui] .mn-settings-dev-fps { border-color: rgba(49,
 body.tema-claro [data-mindnote-ui] .mn-dev-toast { border-color: rgba(49,43,68,.13); color: #393447; background: rgba(255,255,255,.96); }
 @media (max-width: 900px) {
   [data-mindnote-ui]#view-home { grid-template-columns: 214px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config { grid-template-columns: 214px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config .mn-config-main { padding: 0; }
   [data-mindnote-ui] .mn-home-main { padding: 24px 22px 36px; }
   [data-mindnote-ui] .mn-ai-hub { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 680px) {
   [data-mindnote-ui]#view-home { grid-template-columns: 190px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config { grid-template-columns: 190px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config .mn-config-main { padding: 0; }
   [data-mindnote-ui] .mn-home-sidebar { padding-right: 9px; padding-left: 9px; }
   [data-mindnote-ui] .mn-app-logo { gap: 8px; }
   [data-mindnote-ui] .mn-app-logo-copy strong { font-size: 12px; }
@@ -1866,6 +1952,8 @@ body.tema-claro [data-mindnote-ui] .mn-dev-toast { border-color: rgba(49,43,68,.
 }
 @media (max-width: 430px) {
   [data-mindnote-ui]#view-home { grid-template-columns: 160px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config { grid-template-columns: 160px minmax(0,1fr); }
+  [data-mindnote-ui]#view-config .mn-config-main { padding: 0; }
   [data-mindnote-ui] .mn-app-logo-mark { flex-basis: 32px; width: 32px; height: 32px; }
   [data-mindnote-ui] .mn-app-logo-copy { font-size: 9px; }
   [data-mindnote-ui] .mn-home-main { padding-right: 11px; padding-left: 11px; }

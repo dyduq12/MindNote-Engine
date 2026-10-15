@@ -8,21 +8,45 @@
   var botaoProcessarTopo = document.getElementById("btn-processar-topo");
   var botaoProcessar = document.getElementById("botao-processar");
   var abas = Array.from(document.querySelectorAll("#json-backstage [data-tab]"));
+  var intervaloTelemetria = 0;
   if (!envelope || !painel) return;
 
   function open() {
     envelope.dataset.open = "true";
     envelope.setAttribute("aria-hidden", "false");
     painel.setAttribute("aria-hidden", "false");
-    atualizarMetadados();
-    window.dispatchEvent(new Event("mindnote:backstage-change"));
+    try { atualizarMetadados(); }
+    catch (erro) { console.warn("Falha ao atualizar metadados dos Bastidores:", erro); }
+    finally {
+      window.dispatchEvent(new Event("mindnote:backstage-change"));
+      sincronizarIntervaloTelemetria();
+    }
   }
 
   function close() {
     envelope.dataset.open = "false";
     envelope.setAttribute("aria-hidden", "true");
     painel.setAttribute("aria-hidden", "true");
+    limparIntervaloTelemetria();
     window.dispatchEvent(new Event("mindnote:backstage-change"));
+  }
+
+  function limparIntervaloTelemetria() {
+    if (!intervaloTelemetria) return;
+    window.clearInterval(intervaloTelemetria);
+    intervaloTelemetria = 0;
+  }
+
+  function sincronizarIntervaloTelemetria() {
+    var abaMeta = document.querySelector('#json-backstage [data-tab="meta"]');
+    var secaoDev = document.getElementById("meta-dev-telemetry");
+    var ativo = envelope.dataset.open === "true" && abaMeta?.classList.contains("is-active") && secaoDev && !secaoDev.hidden;
+    if (!ativo) { limparIntervaloTelemetria(); return; }
+    if (intervaloTelemetria) return;
+    intervaloTelemetria = window.setInterval(function () {
+      try { atualizarMetadados(); }
+      catch (erro) { console.warn("Falha ao atualizar telemetria dos Bastidores:", erro); }
+    }, 500);
   }
 
   function atualizarMetadados() {
@@ -56,7 +80,7 @@
       var bounds = document.getElementById("meta-dev-bounds");
       var nodes = document.getElementById("meta-dev-nodes");
       if (fps) fps.textContent = `${snapshot.fps ?? 0} FPS`;
-      if (heap) heap.textContent = snapshot.heapBytes == null ? "não suportado" : `${(snapshot.heapBytes / 1048576).toFixed(1)} MB`;
+      if (heap) heap.textContent = snapshot.heapBytes == null ? "N/A" : `${(snapshot.heapBytes / 1048576).toFixed(1)} MB`;
       if (bounds) bounds.textContent = snapshot.bounds ? `${snapshot.bounds.width.toFixed(0)} × ${snapshot.bounds.height.toFixed(0)} px` : "—";
       if (nodes) nodes.textContent = String(snapshot.nodes ?? total);
     }
@@ -70,7 +94,12 @@
       var conteudo = document.getElementById("tab-content-" + aba.dataset.tab);
       if (conteudo) conteudo.hidden = !ativa;
     });
-    if (nome === "meta") atualizarMetadados();
+    if (nome === "meta") {
+      try { atualizarMetadados(); }
+      catch (erro) { console.warn("Falha ao ler telemetria dos Bastidores:", erro); }
+    }
+    sincronizarIntervaloTelemetria();
+    window.dispatchEvent(new Event("mindnote:backstage-change"));
   }
 
   if (botaoAbrir) botaoAbrir.addEventListener("click", open);
@@ -83,5 +112,11 @@
     if (event.key === "Escape" && envelope.dataset.open === "true") close();
   });
 
-  window.MindNoteBackstage = { open: open, close: close, selecionarAba: selecionarAba, atualizarMetadados: atualizarMetadados };
+  window.MindNoteBackstage = {
+    open: open,
+    close: close,
+    selecionarAba: selecionarAba,
+    atualizarMetadados: atualizarMetadados,
+    sincronizarTelemetria: sincronizarIntervaloTelemetria,
+  };
 }());

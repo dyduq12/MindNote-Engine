@@ -132,10 +132,64 @@ const ParserSanitizer = (() => {
     return { jsonTexto, titulo };
   }
 
+  function converterOutlineMarkdown(texto) {
+    const linhas = texto.split(/\r?\n/).filter((linha) => linha.trim());
+    if (!linhas.length) return null;
+    const itens = [];
+    let nivelCabecalho = -1;
+    for (const linha of linhas) {
+      const heading = linha.match(/^(\s*)(#{1,6})\s+(.+?)\s*#*\s*$/);
+      const bullet = linha.match(/^(\s*)(?:[-*+]\s+|\d+[.)]\s+)(.+?)\s*$/);
+      if (!heading && !bullet) return null;
+      const item = heading || bullet;
+      const indent = (item[1].match(/\t/g) || []).length * 2 + item[1].replace(/\t/g, "  ").length;
+      let depth;
+      if (heading) { depth = Math.max(0, heading[2].length - 1); nivelCabecalho = depth; }
+      else depth = nivelCabecalho >= 0 ? nivelCabecalho + 1 + Math.floor(indent / 2) : Math.floor(indent / 2);
+      const title = (heading ? heading[3] : bullet[2]).trim();
+      if (title) itens.push({ depth, title });
+    }
+    if (!itens.length) return null;
+    const roots = [], pilha = [];
+    for (const item of itens) {
+      const no = { titulo: item.title, anotacao: null, cor: null, filhos: [] };
+      const depth = Math.min(item.depth, pilha.length);
+      pilha.length = depth;
+      if (depth === 0) roots.push(no);
+      else pilha[depth - 1].filhos.push(no);
+      pilha[depth] = no;
+    }
+    return roots.length ? JSON.stringify(roots.length === 1 ? roots[0] : roots) : null;
+  }
+
+  function combinarCandidatos(candidatos) {
+    const raizes = [];
+    candidatos.forEach(({ jsonTexto }) => {
+      const dados = JSON.parse(jsonTexto);
+      raizes.push(...(Array.isArray(dados) ? dados : [dados]));
+    });
+    return JSON.stringify(raizes);
+  }
+
   // ─── Ponto de entrada principal ──────────────────────────────────────────
   function sanitizarEntradaJSON(textoBruto) {
     if (typeof textoBruto !== "string" || textoBruto.trim() === "") {
       return { status: "vazio" };
+    }
+
+    let aggressive = true, multi = true, markdown = true;
+    try {
+      aggressive = localStorage.getItem("mn_sanitizer_aggressive") !== "false";
+      multi = localStorage.getItem("mn_sanitizer_multi_modal") !== "false";
+      markdown = localStorage.getItem("mn_markdown_outline_support") !== "false";
+    } catch { /* usa os padrões seguros da sessão */ }
+    if (markdown) {
+      const outline = converterOutlineMarkdown(textoBruto);
+      if (outline) return { status: "unico", jsonTexto: outline };
+    }
+    if (!aggressive) {
+      try { JSON.parse(textoBruto); return { status: "unico", jsonTexto: textoBruto }; }
+      catch { return { status: "unico", jsonTexto: textoBruto }; }
     }
 
     // Prioridade 1: blocos delimitados por ```json ... ```
@@ -167,10 +221,12 @@ const ParserSanitizer = (() => {
       return { status: "unico", jsonTexto: candidatosValidos[0].jsonTexto };
     }
 
+    if (!multi) return { status: "unico", jsonTexto: candidatosValidos[0].jsonTexto };
+
     return { status: "multiplo", candidatos: candidatosValidos };
   }
 
-  return { sanitizarEntradaJSON };
+  return { sanitizarEntradaJSON, converterOutlineMarkdown, combinarCandidatos };
 })();
 
 // Exposicao global no mesmo padrao de MindNoteApp, sem interferir nele.

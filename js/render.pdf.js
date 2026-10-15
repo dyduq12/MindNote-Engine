@@ -3,7 +3,7 @@
  *
  * Correções aplicadas (commit fix/pdf-bounding-box):
  *   1. Bounding box calculado varrendo todos os nós — sem depender de canvasDimensoes.
- *   2. Folha vetorial dinâmica com 40 px livres em cada lado.
+ *   2. Folha vetorial dinâmica com margem configurável e simétrica.
  *   3. offsetX / offsetY corrigem qualquer deslocamento assimétrico.
  *   4. temaAtivo ('claro' | 'escuro') recebido como parâmetro — paletas independentes.
  *
@@ -21,8 +21,16 @@ const PDF_ENTRELINHA         = 26;    // px — escala de entrelinha calibrada
 const PDF_PADDING_VERTICAL   = 16;    // px
 const PDF_PADDING_HORIZONTAL = 20;    // px
 
-// ─── Respiro vetorial de 40 px, sem redimensionar o grafo ────────────────────
-const RESPIRO = 40;
+// ─── Margem vetorial configurável; a página contínua continua em escala 1:1 ─
+const MARGEM_PADRAO = 60;
+
+function obterConfiguracaoPDF() {
+  const read = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
+  const margem = Math.max(20, Math.min(150, Number(read('mn_pdf_margin', MARGEM_PADRAO)) || MARGEM_PADRAO));
+  const tema = ['tela', 'claro', 'escuro'].includes(read('mn_pdf_theme_parity', 'tela')) ? read('mn_pdf_theme_parity', 'tela') : 'tela';
+  const formato = ['continuo', 'a4-paisagem', 'a3-estudo'].includes(read('mn_pdf_format', 'continuo')) ? read('mn_pdf_format', 'continuo') : 'continuo';
+  return { margem, tema, formato, renderLinhas: read('mn_pdf_render_lines', 'true') !== 'false', metadados: read('mn_pdf_embed_metadata', 'true') !== 'false' };
+}
 
 // ─── Utilitário: hex '#RRGGBB' → [r, g, b] (0–255) ──────────────────────────
 function hexParaRGB(hex) {
@@ -116,9 +124,9 @@ const PALETA = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOUNDING BOX DINÂMICO
 // Varre todos os nós de todas as árvores e retorna os limites reais ocupados
-// mais os offsets necessários para manter 40 px de respiro ao redor.
+// mais os offsets necessários para manter a margem escolhida ao redor.
 // ═══════════════════════════════════════════════════════════════════════════════
-function calcularBoundingBox(arvores) {
+function calcularBoundingBox(arvores, margem = MARGEM_PADRAO) {
   const rootSvg = document.querySelector("#canvas-container svg #viewport-root");
   if (rootSvg?.getBBox) {
     const auxiliares = rootSvg.querySelectorAll(".mindnote-hitbox, .mindnote-handle, #micro-toolbar");
@@ -128,10 +136,10 @@ function calcularBoundingBox(arvores) {
       const box = rootSvg.getBBox();
       if (box.width > 0 && box.height > 0) {
         return {
-          larguraTotal: box.width + RESPIRO * 2,
-          alturaTotal: box.height + RESPIRO * 2,
-          offsetX: RESPIRO - box.x,
-          offsetY: RESPIRO - box.y,
+          larguraTotal: box.width + margem * 2,
+          alturaTotal: box.height + margem * 2,
+          offsetX: margem - box.x,
+          offsetY: margem - box.y,
         };
       }
     } catch { /* fallback para os limites geométricos persistidos */ }
@@ -190,10 +198,10 @@ function calcularBoundingBox(arvores) {
   // Guarda contra árvores vazias
   if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 800; maxY = 600; }
 
-  const larguraTotal = (maxX - minX) + RESPIRO * 2;
-  const alturaTotal  = (maxY - minY) + RESPIRO * 2;
-  const offsetX      = RESPIRO - minX;
-  const offsetY      = RESPIRO - minY;
+  const larguraTotal = (maxX - minX) + margem * 2;
+  const alturaTotal  = (maxY - minY) + margem * 2;
+  const offsetX      = margem - minX;
+  const offsetY      = margem - minY;
 
   return { larguraTotal, alturaTotal, offsetX, offsetY };
 }
@@ -220,12 +228,25 @@ function desenharConectores(doc, arvores, paleta, offsetX, offsetY) {
         const dx1 = c.p1.x - c.p0.x,  dy1 = c.p1.y - c.p0.y;
         const dx2 = c.p2.x - c.p0.x,  dy2 = c.p2.y - c.p0.y;
         const dx3 = c.p3.x - c.p0.x,  dy3 = c.p3.y - c.p0.y;
-        doc.lines(
-          [[dx1, dy1, dx2, dy2, dx3, dy3]],
-          c.p0.x + offsetX, c.p0.y + offsetY,
-          [1, 1],
-          'S'
-        );
+        if (c.roteamento === 'ortogonal') {
+          if (c.eixo === 'vertical') {
+            const middleY = (c.p0.y + c.p3.y) / 2 + offsetY;
+            doc.line(c.p0.x + offsetX, c.p0.y + offsetY, c.p0.x + offsetX, middleY);
+            doc.line(c.p0.x + offsetX, middleY, c.p3.x + offsetX, middleY);
+            doc.line(c.p3.x + offsetX, middleY, c.p3.x + offsetX, c.p3.y + offsetY);
+          } else {
+            const middleX = (c.p0.x + c.p3.x) / 2 + offsetX;
+            doc.line(c.p0.x + offsetX, c.p0.y + offsetY, middleX, c.p0.y + offsetY);
+            doc.line(middleX, c.p0.y + offsetY, middleX, c.p3.y + offsetY);
+            doc.line(middleX, c.p3.y + offsetY, c.p3.x + offsetX, c.p3.y + offsetY);
+          }
+        } else {
+          doc.lines(
+            [[dx1, dy1, dx2, dy2, dx3, dy3]],
+            c.p0.x + offsetX, c.p0.y + offsetY,
+            [1, 1], 'S'
+          );
+        }
       });
     }
 
@@ -274,14 +295,14 @@ function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
     doc.setFontSize(15);
 
     const linhas        = dT.linhasTexto || [no.titulo];
-    const totalLinhas   = linhas.length;
     const espacamento   = 22;
-    const alturaBloco   = (totalLinhas - 1) * espacamento;
-    const yInicial      = (no.posicao.y + offsetY) - alturaBloco / 2;
+    const linhasQuebradas = dT.linhasQuebradas || linhas.length;
+    const deslocamentoPrimeiraLinha = -((linhasQuebradas - 1) * espacamento) / 2;
+    const yInicial      = no.posicao.y + offsetY;
     const xCentro       = x + dT.largura / 2;
 
     linhas.forEach((linha, i) => {
-      doc.text(linha, xCentro, yInicial + i * espacamento, {
+      doc.text(linha, xCentro, yInicial + deslocamentoPrimeiraLinha + i * espacamento, {
         align: 'center',
         baseline: 'middle',
       });
@@ -292,7 +313,7 @@ function desenharPilulas(doc, arvores, paleta, offsetX, offsetY) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PASSAGEM 3 — Caixas de anotação e anexos
 // ═══════════════════════════════════════════════════════════════════════════════
-function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
+function desenharCaixas(doc, arvores, paleta, offsetX, offsetY, renderLinhas = true) {
   arvores.forEach(raiz => percorrerArvorePDF(raiz, (no, corEfetiva) => {
     const dA = no.dimensoes?.anotacao;
     if (!dA) return;
@@ -309,15 +330,17 @@ function desenharCaixas(doc, arvores, paleta, offsetX, offsetY) {
       doc.roundedRect(xA, yA, dA.largura, dA.altura, 6, 6, 'FD');
       doc.setLineDashPattern([], 0);
 
-      setDraw(doc, misturarHex(paleta.caixaLinhasPauta, paleta.caixaFill, .8));
-      doc.setLineWidth(1);
-      const pv   = dA.paddingVertical   || PDF_PADDING_VERTICAL;
-      const ph   = dA.paddingHorizontal || PDF_PADDING_HORIZONTAL;
-      const step = dA.entrelinha        || PDF_ENTRELINHA;
-      for (let i = 1; i <= (dA.linhasFinais || 0); i++) {
-        const ly = yA + pv + i * step;
-        if (ly <= yA + dA.altura - pv) {
-          doc.line(xA + ph, ly, xA + dA.largura - ph, ly);
+      if (renderLinhas) {
+        setDraw(doc, misturarHex(paleta.caixaLinhasPauta, paleta.caixaFill, .8));
+        doc.setLineWidth(1);
+        const pv   = dA.paddingVertical   || PDF_PADDING_VERTICAL;
+        const ph   = dA.paddingHorizontal || PDF_PADDING_HORIZONTAL;
+        const step = dA.entrelinha        || PDF_ENTRELINHA;
+        for (let i = 1; i <= (dA.linhasFinais || 0); i++) {
+          const ly = yA + pv + i * step;
+          if (ly <= yA + dA.altura - pv) {
+            doc.line(xA + ph, ly, xA + dA.largura - ph, ly);
+          }
         }
       }
 
@@ -361,30 +384,50 @@ function exportarPDFContinuo(arvores, temaAtivo) {
   }
   const { jsPDF } = window.jspdf;
 
-  // 2. Seleciona paleta conforme tema ativo (padrão: 'claro')
-  const paleta = temaAtivo === 'escuro' ? PALETA.escuro : PALETA.claro;
+  const configuracao = obterConfiguracaoPDF();
+  const temaPDF = configuracao.tema === 'tela' ? temaAtivo : configuracao.tema;
+  const paleta = temaPDF === 'escuro' ? PALETA.escuro : PALETA.claro;
 
   // 3. Bounding box dinâmico — ignora canvasDimensoes
-  const { larguraTotal, alturaTotal, offsetX, offsetY } = calcularBoundingBox(arvores);
+  const { larguraTotal, alturaTotal, offsetX, offsetY } = calcularBoundingBox(arvores, configuracao.margem);
 
-  // 4. Inicialização do documento panorâmico contínuo
+  // 4. Contínuo é o padrão 1:1. Os formatos de estudo usam paginação em ladrilhos,
+  // deslocando o mesmo desenho vetorial para recortar cada folha sem redimensioná-lo.
+  const tile = configuracao.formato === 'a4-paisagem' ? [1122.52, 793.7]
+    : configuracao.formato === 'a3-estudo' ? [1587.4, 1122.52] : [larguraTotal, alturaTotal];
+  const colunas = Math.max(1, Math.ceil(larguraTotal / tile[0]));
+  const linhas = Math.max(1, Math.ceil(alturaTotal / tile[1]));
   const doc = new jsPDF({
-    orientation: larguraTotal >= alturaTotal ? 'landscape' : 'portrait',
-    unit: 'px',
-    format: [larguraTotal, alturaTotal],
-    hotfixes: ['px_scaling'],
+    orientation: tile[0] >= tile[1] ? 'landscape' : 'portrait',
+    unit: 'px', format: tile, hotfixes: ['px_scaling'],
   });
 
-  // 5. Fundo do PDF conforme tema
-  const [r, g, b] = hexParaRGB(paleta.fundo);
-  doc.setFillColor(r, g, b);
-  doc.rect(0, 0, larguraTotal, alturaTotal, 'F');
+  let totalNos = 0;
+  arvores.forEach((raiz) => percorrerArvorePDF(raiz, () => { totalNos += 1; }));
+  const titulo = arvores?.[0]?.titulo || 'MindNote';
+  const dataModificacao = new Date().toISOString();
+  if (configuracao.metadados && doc.setProperties) {
+    doc.setProperties({
+      title: titulo,
+      subject: `Mapa mental · ${totalNos} nós · modificado em ${dataModificacao}`,
+      creator: 'MindNote Engine',
+      keywords: `MindNote, mapa mental, ${totalNos} nós, modificado ${dataModificacao}`,
+    });
+  }
 
-  // 6. Três passagens de renderização vetorial (mesma ordem do SVG)
-  desenharConectores(doc, arvores, paleta, offsetX, offsetY);   // Passagem 1
-  desenharCaixas(doc, arvores, paleta, offsetX, offsetY);       // Passagem 3 → abaixo das pílulas
-  desenharPilulas(doc, arvores, paleta, offsetX, offsetY);      // Passagem 2 → topo
+  for (let linha = 0; linha < linhas; linha += 1) {
+    for (let coluna = 0; coluna < colunas; coluna += 1) {
+      if (linha !== 0 || coluna !== 0) doc.addPage(tile, tile[0] >= tile[1] ? 'landscape' : 'portrait');
+      const [r, g, b] = hexParaRGB(paleta.fundo);
+      doc.setFillColor(r, g, b); doc.rect(0, 0, tile[0], tile[1], 'F');
+      const deslocamentoX = offsetX - coluna * tile[0];
+      const deslocamentoY = offsetY - linha * tile[1];
+      desenharConectores(doc, arvores, paleta, deslocamentoX, deslocamentoY);
+      desenharPilulas(doc, arvores, paleta, deslocamentoX, deslocamentoY);
+      desenharCaixas(doc, arvores, paleta, deslocamentoX, deslocamentoY, configuracao.renderLinhas);
+    }
+  }
 
-  // 7. Download
+  // 5. Download
   doc.save(obterNomeArquivo(arvores));
 }

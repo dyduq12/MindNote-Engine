@@ -91,7 +91,7 @@ const MindNoteSidebar = (() => {
     if (novaPasta) novaPasta.hidden = tipo !== "pastas";
     const main = document.getElementById("mn-home-main");
     if (tipo === "settings") {
-      window.MindNoteSettings?.mostrarPagina?.("usuario");
+      window.MindNoteRouter?.navegarPara?.("config");
       return;
     }
     if (main) main.dataset.view = "maps";
@@ -121,8 +121,8 @@ const MindNoteSidebar = (() => {
         alternarDevMode();
       } else resetClicksTimer = window.setTimeout(() => { clicks = 0; }, 2000);
     });
-    document.getElementById("mn-cloud-configure")?.addEventListener("click", () => window.MindNoteSettings?.mostrarPagina?.("sync"));
-    document.getElementById("btn-home-config")?.addEventListener("click", () => window.MindNoteSettings?.mostrarPagina?.("usuario"));
+    document.getElementById("mn-cloud-configure")?.addEventListener("click", () => window.MindNoteRouter?.navegarPara?.("config", null, { tab: "sync" }));
+    document.getElementById("btn-home-config")?.addEventListener("click", () => window.MindNoteRouter?.navegarPara?.("config"));
     document.getElementById("btn-home-theme")?.addEventListener("click", () => {
       window.MindNoteTheme?.alternar?.();
       atualizarTemaRapido();

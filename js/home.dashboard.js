@@ -32,7 +32,8 @@ Exemplo válido:
     document.querySelectorAll(".mn-card-menu").forEach((menu) => {
       if (menu !== excecao) {
         menu.hidden = true;
-        menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+        const botao = menu.closest(".mn-map-card")?.querySelector(".mn-card-menu-trigger");
+        botao?.setAttribute("aria-expanded", "false");
         menu.closest(".mn-map-card")?.classList.remove("is-menu-open");
       }
     });
@@ -94,13 +95,16 @@ Exemplo válido:
     botao.setAttribute("aria-label", botao.title);
   }
 
-  async function copiarPromptIA() {
-    const botao = document.getElementById("btn-copiar-prompt-ia");
+  async function copiarPromptIA(event) {
+    const botao = event?.currentTarget || document.getElementById("btn-copiar-prompt-ia");
     if (!botao) return;
+    const textoOriginal = botao.dataset.labelOriginal || botao.textContent;
+    botao.dataset.labelOriginal = textoOriginal;
+    const promptAtual = window.MindNoteSettings?.obterPromptMestre?.() || PROMPT_MESTRE_IA;
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(PROMPT_MESTRE_IA);
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(promptAtual);
       else {
-        const temporario = elemento("textarea", "", PROMPT_MESTRE_IA);
+        const temporario = elemento("textarea", "", promptAtual);
         temporario.setAttribute("readonly", "");
         temporario.style.position = "fixed";
         temporario.style.opacity = "0";
@@ -111,16 +115,16 @@ Exemplo válido:
         if (!copiado) throw new Error("A cópia não foi autorizada pelo navegador.");
       }
       window.clearTimeout(temporizadorFeedbackPrompt);
-      botao.textContent = "Prompt Copiado!";
+      botao.textContent = "Copiado!";
       botao.classList.add("is-copied");
       temporizadorFeedbackPrompt = window.setTimeout(() => {
-        botao.textContent = "Copiar Prompt de IA";
+        botao.textContent = textoOriginal;
         botao.classList.remove("is-copied");
       }, 1800);
     } catch (erro) {
       console.error("Falha ao copiar o prompt:", erro);
       botao.textContent = "Não foi possível copiar";
-      window.setTimeout(() => { botao.textContent = "Copiar Prompt de IA"; }, 1800);
+      window.setTimeout(() => { botao.textContent = textoOriginal; }, 1800);
     }
   }
 
@@ -182,9 +186,15 @@ Exemplo válido:
     menuButton.type = "button";
     menuButton.setAttribute("aria-label", `Ações para ${meta.titulo || "mapa"}`);
     menuButton.setAttribute("aria-expanded", "false");
+
+    const menu = elemento("div", "mn-card-menu");
+    menu.hidden = true;
+    menu.setAttribute("role", "menu");
+    menu.addEventListener("click", (event) => event.stopPropagation());
+
     menuButton.addEventListener("click", (event) => {
+      event.preventDefault();
       event.stopPropagation();
-      const menu = menuButton.nextElementSibling;
       const abrir = menu.hidden;
       fecharMenus(menu);
       menu.hidden = !abrir;
@@ -192,9 +202,6 @@ Exemplo válido:
       card.classList.toggle("is-menu-open", abrir);
     });
 
-    const menu = elemento("div", "mn-card-menu");
-    menu.hidden = true;
-    menu.setAttribute("role", "menu");
     ["Abrir", meta.favorito ? "Remover dos favoritos" : "Favoritar", "Organizar em pasta", "Renomear", "Duplicar", "Excluir"].forEach((acao) => {
       const item = elemento("button", `mn-card-menu-item${acao === "Excluir" ? " mn-card-menu-item--danger" : ""}`, acao);
       item.type = "button";
@@ -210,7 +217,13 @@ Exemplo válido:
 
     footer.append(details, menuButton);
     card.append(preview, footer, menu);
-    card.addEventListener("click", () => navegarParaMapa(meta.id));
+    card.addEventListener("click", () => {
+      if (card.classList.contains("is-menu-open")) {
+        fecharMenus();
+        return;
+      }
+      navegarParaMapa(meta.id);
+    });
     card.addEventListener("keydown", (event) => {
       if (event.target === card && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
@@ -280,8 +293,17 @@ Exemplo válido:
         ? window.ParserSanitizer.sanitizarEntradaJSON(textoBruto)
         : { status: "unico", jsonTexto: textoBruto };
       if (resultado.status === "vazio") throw new Error("Cole uma estrutura JSON para continuar.");
-      if (resultado.status === "multiplo") throw new Error("Foi encontrado mais de um mapa. Cole uma única árvore por vez.");
-      const jsonTexto = resultado.jsonTexto;
+      let jsonTexto = resultado.jsonTexto;
+      if (resultado.status === "multiplo") {
+        const opcoes = resultado.candidatos.map((c, i) => `${i + 1}. ${c.titulo}`).join("\n");
+        const escolha = window.prompt(`Foram encontrados vários mapas. Digite um número para escolher ou 0 para unificar todos como raízes independentes.\n\n${opcoes}`, "1");
+        if (String(escolha).trim() === "0") jsonTexto = window.ParserSanitizer.combinarCandidatos(resultado.candidatos);
+        else {
+          const indice = Number(escolha) - 1;
+          if (!Number.isInteger(indice) || indice < 0 || indice >= resultado.candidatos.length) throw new Error("Importação cancelada: escolha um mapa da lista ou 0 para unificar.");
+          jsonTexto = resultado.candidatos[indice].jsonTexto;
+        }
+      }
       validarArvoreImportada(JSON.parse(jsonTexto));
       if (erroEl) { erroEl.hidden = true; erroEl.textContent = ""; }
       fecharModalImportacao();
@@ -311,6 +333,8 @@ Exemplo válido:
     const criarVazio = document.getElementById("mn-home-empty-create");
     const sync = document.getElementById("btn-home-sync");
     const promptIA = document.getElementById("btn-copiar-prompt-ia");
+    const promptIAConfig = document.getElementById("btn-copiar-prompt-ia-config");
+    const promptMestre = document.getElementById("btn-copy-master-prompt");
 
     busca?.addEventListener("input", () => {
       window.clearTimeout(temporizadorBusca);
@@ -331,10 +355,12 @@ Exemplo válido:
     fecharImportacao?.addEventListener("click", fecharModalImportacao);
     modalImportacao?.addEventListener("click", (event) => { if (event.target === modalImportacao) fecharModalImportacao(); });
     promptIA?.addEventListener("click", copiarPromptIA);
+    promptIAConfig?.addEventListener("click", copiarPromptIA);
+    promptMestre?.addEventListener("click", copiarPromptIA);
     sync?.addEventListener("click", () => window.alert("A sincronização estará disponível em uma próxima etapa."));
     document.addEventListener("click", (event) => {
-      if (!event.target.closest(".mn-home-create-wrap")) abrirMenuCriacao(false);
-      if (!event.target.closest(".mn-map-card")) fecharMenus();
+      if (!event.target?.closest?.(".mn-home-create-wrap")) abrirMenuCriacao(false);
+      if (!event.target?.closest?.(".mn-card-menu-trigger") && !event.target?.closest?.(".mn-card-menu")) fecharMenus();
     });
     document.addEventListener("keydown", (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {

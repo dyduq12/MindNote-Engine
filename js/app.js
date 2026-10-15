@@ -52,6 +52,7 @@ Number.isFinite(anotacao.palavras_estimadas) &&
 anotacao.palavras_estimadas >= 8;
 return {
 tipo: "pauta",
+modeloPauta: ["horizontal", "quadriculada", "pontos", "cornell"].includes(anotacao.modeloPauta) ? anotacao.modeloPauta : (window.MindNoteSettings?.obterPautaPadrao?.() || "horizontal"),
 alturaCustomizada: null,
 linhasManuais: linhasValidas ? Math.max(3, Math.floor(anotacao.linhas_manuais)) : null,
 palavrasEstimadas: linhasValidas ? null : palavrasValidas ? anotacao.palavras_estimadas : 8,
@@ -96,16 +97,140 @@ return listaBruta.map((raiz) => validarNo(raiz, 0));
 
 function obterEscalaEntrelinha() {
 const valor = Number(document.getElementById("entrada-escala")?.value);
-return Number.isFinite(valor) && valor > 0 ? Math.max(26, valor) : 26;
+return Number.isFinite(valor) && valor > 0 ? Math.max(18, Math.min(36, valor)) : 26;
+}
+
+function percorrerNosGeometricos(no, callback, profundidade = 0) {
+callback(no, profundidade);
+no.filhos?.forEach((filho) => percorrerNosGeometricos(filho, callback, profundidade + 1));
+}
+
+function aplicarLayoutConfigurado(arvores, config) {
+const gapV = config.gapVertical || 60, gapH = config.gapHorizontal || 120;
+const gapRaizes = config.gapMultiRoots || 160;
+const larguraNo = (no) => no.dimensoes.unidadeComposta.larguraTotal;
+const alturaNo = (no) => no.dimensoes.unidadeComposta.alturaTotal;
+const posicionar = (no, x, y) => {
+no.posicao = { x, y };
+no.posicaoAnotacao = no.dimensoes.anotacao ? { x: x + no.dimensoes.titulo.largura + 30, y } : null;
+no.posicaoAnexo = no.dimensoes.anotacao?.anexo ? { x: no.posicaoAnotacao.x + no.dimensoes.anotacao.largura + 30, y } : null;
+};
+let topoRaiz = 0, cursorGrid = 0, cursorRadial = 0;
+
+if (config.template === "study-briefing") {
+  arvores.forEach((raiz) => {
+    const spans = new Map(), alturasNivel = [];
+    const medir = (no, depth = 0) => {
+      alturasNivel[depth] = Math.max(alturasNivel[depth] || 0, alturaNo(no));
+      const filhos = no.filhos.map((filho) => medir(filho, depth + 1));
+      const larguraFilhos = filhos.reduce((sum, child) => sum + child, 0) + Math.max(0, filhos.length - 1) * gapV;
+      const span = Math.max(larguraNo(no), larguraFilhos); spans.set(no, span); return span;
+    };
+    medir(raiz);
+    const yNivel = []; alturasNivel.forEach((height, i) => { yNivel[i] = (yNivel[i - 1] || topoRaiz) + (i ? alturasNivel[i - 1] / 2 + gapH + height / 2 : height / 2); });
+    const posicionarVertical = (no, left, depth = 0) => {
+      const span = spans.get(no); posicionar(no, left + (span - larguraNo(no)) / 2, yNivel[depth]);
+      const total = no.filhos.reduce((sum, child) => sum + spans.get(child), 0) + Math.max(0, no.filhos.length - 1) * gapV;
+      let x = left + (span - total) / 2;
+      no.filhos.forEach((child) => { posicionarVertical(child, x, depth + 1); x += spans.get(child) + gapV; });
+    };
+    posicionarVertical(raiz, 0);
+    topoRaiz = yNivel[alturasNivel.length - 1] + alturasNivel.at(-1) / 2 + gapRaizes;
+  });
+} else if (config.template === "grid-livre") {
+  const colunas = 3;
+  arvores.forEach((raiz) => {
+    const nos = []; percorrerNosGeometricos(raiz, (no) => nos.push(no));
+    const w = Math.max(...nos.map(larguraNo)), h = Math.max(...nos.map(alturaNo));
+    nos.forEach((no, i) => posicionar(no, (i % colunas) * (w + gapH), cursorGrid + Math.floor(i / colunas) * (h + gapV)));
+    cursorGrid += Math.ceil(nos.length / colunas) * (h + gapV) + gapRaizes;
+  });
+} else if (config.template === "radial") {
+  arvores.forEach((raiz) => {
+    let profundidadeMax = 0, folhasMax = 1, larguraMax = 0;
+    const folhas = (no, depth = 0) => {
+      profundidadeMax = Math.max(profundidadeMax, depth); larguraMax = Math.max(larguraMax, larguraNo(no));
+      return no.filhos.length ? no.filhos.reduce((sum, child) => sum + folhas(child, depth + 1), 0) : 1;
+    };
+    folhasMax = folhas(raiz);
+    const raioNivel = larguraMax + gapH;
+    const raioLimite = Math.max(raioNivel, profundidadeMax * raioNivel);
+    const centroX = cursorRadial + raioLimite + larguraMax, centroY = raioLimite + larguraMax;
+    const distribuir = (no, depth, inicio, fim) => {
+      const angulo = (inicio + fim) / 2, raio = depth * raioNivel;
+      posicionar(no, centroX + Math.cos(angulo) * raio - larguraNo(no) / 2, centroY + Math.sin(angulo) * raio);
+      let cursor = inicio;
+      const total = no.filhos.reduce((sum, child) => sum + folhas(child, 0), 0) || 1;
+      no.filhos.forEach((child) => {
+        const amplitude = (fim - inicio) * (folhas(child, 0) / total);
+        distribuir(child, depth + 1, cursor, cursor + amplitude); cursor += amplitude;
+      });
+    };
+    distribuir(raiz, 0, -Math.PI / 2, 3 * Math.PI / 2);
+    cursorRadial += 2 * (raioLimite + larguraMax) + gapRaizes;
+  });
+} else {
+  arvores.forEach((raiz, index) => {
+    percorrerNosGeometricos(raiz, (no, depth) => {
+      const dx = depth * (gapH - 120);
+      no.posicao.x += dx;
+      if (no.posicaoAnotacao) no.posicaoAnotacao.x += dx;
+      if (no.posicaoAnexo) no.posicaoAnexo.x += dx;
+      const dy = index * (gapRaizes - 160);
+      no.posicao.y += dy;
+      if (no.posicaoAnotacao) no.posicaoAnotacao.y += dy;
+      if (no.posicaoAnexo) no.posicaoAnexo.y += dy;
+    });
+  });
+}
+
+let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+arvores.forEach((raiz) => percorrerNosGeometricos(raiz, (no) => {
+  const x0 = no.posicao.x, x1 = x0 + larguraNo(no), y0 = no.posicao.y - alturaNo(no) / 2, y1 = no.posicao.y + alturaNo(no) / 2;
+  minX = Math.min(minX, x0); maxX = Math.max(maxX, x1); minY = Math.min(minY, y0); maxY = Math.max(maxY, y1);
+}));
+if (!Number.isFinite(minX)) return;
+const deslocar = (no) => {
+  no.posicao.x += 150 - minX; no.posicao.y += 150 - minY;
+  if (no.posicaoAnotacao) { no.posicaoAnotacao.x += 150 - minX; no.posicaoAnotacao.y += 150 - minY; }
+  if (no.posicaoAnexo) { no.posicaoAnexo.x += 150 - minX; no.posicaoAnexo.y += 150 - minY; }
+  no.filhos.forEach(deslocar);
+};
+arvores.forEach(deslocar);
+arvores.forEach((raiz) => calcularConectores(raiz));
+const ratio = config.bezierTension === "rigida" ? .25 : .5;
+arvores.forEach((raiz) => percorrerNosGeometricos(raiz, (no) => no.conectoresFilhos?.forEach(({ curva }, index) => {
+  const c = curva, dx = c.p3.x - c.p0.x;
+  c.roteamento = config.bezierTension === "ortogonal" ? "ortogonal" : "bezier";
+  if (config.template === "study-briefing" && no.filhos[index]) {
+    const child = no.filhos[index];
+    c.p0 = { x: no.posicao.x + no.dimensoes.titulo.largura / 2, y: no.posicao.y + no.dimensoes.titulo.altura / 2 };
+    c.p3 = { x: child.posicao.x + child.dimensoes.titulo.largura / 2, y: child.posicao.y - child.dimensoes.titulo.altura / 2 };
+    c.eixo = "vertical";
+    const dy = c.p3.y - c.p0.y, controleY = c.p0.y + dy * ratio;
+    c.p1 = { x: c.p0.x, y: controleY }; c.p2 = { x: c.p3.x, y: c.p3.y - dy * ratio };
+  } else {
+    const controleX = c.p0.x + dx * ratio;
+    c.eixo = "horizontal";
+    c.p1 = { x: controleX, y: c.p0.y }; c.p2 = { x: c.p3.x - dx * ratio, y: c.p3.y };
+  }
+})));
+const canvas = { larguraTotal: maxX - minX + 300, alturaTotal: maxY - minY + 300 };
+arvores.forEach((raiz) => percorrerNosGeometricos(raiz, (no) => { no.canvasDimensoes = canvas; }));
 }
 
 // ─── Ciclo principal ───────────────────────────────────────────────────────
 function reprocessarERenderizar() {
 if (!Array.isArray(arvoresAtuais) || arvoresAtuais.length === 0) return;
+const editorAtivo = document.getElementById("view-editor");
+if (!editorAtivo || editorAtivo.hidden || editorAtivo.style.display === "none") return;
+const layoutConfig = window.MindNoteSettings?.obterLayoutConfig?.() || {};
+if (typeof CONST_GEOMETRIA !== "undefined") CONST_GEOMETRIA.GAP_VERTICAL_IRMAOS = layoutConfig.gapVertical || 60;
 arvoresAtuais.forEach((raiz) =>
 enriquecerArvoreComDimensoes(raiz, obterEscalaEntrelinha())
 );
 calcularCoordenadasMultiplas(arvoresAtuais);
+aplicarLayoutConfigurado(arvoresAtuais, layoutConfig);
 const container = document.getElementById("canvas-container");
 if (!container) return;
 // ─── Fase 3 (v2.0): estabilização de câmera — captura o viewBox do SVG
@@ -231,6 +356,7 @@ const novoFilho = {
 titulo: "Novo Tópico",
 anotacao: {
 tipo: "pauta",
+modeloPauta: window.MindNoteSettings?.obterPautaPadrao?.() || "horizontal",
 linhasManuais: 4,
 alturaCustomizada: null,
 palavrasEstimadas: null,
@@ -249,6 +375,7 @@ if (!no || no.anotacao !== null) return false;
 window.MindNoteHistory?.registrarSnapshot("adicionar-anotacao");
 no.anotacao = {
 tipo: "pauta",
+modeloPauta: window.MindNoteSettings?.obterPautaPadrao?.() || "horizontal",
 linhasManuais: 4,
 alturaCustomizada: null,
 palavrasEstimadas: null,
@@ -284,6 +411,7 @@ no.anotacao.linhasManuais = null;
 no.anotacao.palavrasEstimadas = null;
 } else {
 no.anotacao.tipo = "pauta";
+no.anotacao.modeloPauta = window.MindNoteSettings?.obterPautaPadrao?.() || "horizontal";
 no.anotacao.alturaCustomizada = null;
 no.anotacao.linhasManuais = 4;
 no.anotacao.palavrasEstimadas = null;
@@ -487,7 +615,7 @@ definirTema(temaAtual);
 const botaoTema = document.getElementById("botao-tema");
 if (botaoTema) botaoTema.textContent = temaAtual === "claro" ? "Tema: Claro" : "Tema: Escuro";
 const editor = document.getElementById("view-editor");
-if (editor?.style.display !== "none" && Array.isArray(arvoresAtuais)) reprocessarERenderizar();
+if (editor && !editor.hidden && editor.style.display !== "none" && Array.isArray(arvoresAtuais)) reprocessarERenderizar();
 });
 
 // ─── Exposição pública ─────────────────────────────────────────────────────────────────
@@ -526,11 +654,20 @@ const botaoExportar = document.getElementById("botao-exportar-pdf");
 const areaErro = document.getElementById("area-erro");
 const botaoVoltarHome = document.getElementById("botao-voltar-home");
 
+const elementosObrigatoriosEditor = { textarea, entradaEscala, botaoProcessar, botaoTema, botaoNovaRaiz, botaoExportar, areaErro };
+const elementosEditorAusentes = Object.entries(elementosObrigatoriosEditor)
+  .filter(([, elemento]) => !elemento)
+  .map(([nome]) => nome);
+if (elementosEditorAusentes.length) {
+  console.error("Bootstrap do Editor interrompido: elementos DOM ausentes", elementosEditorAusentes);
+  return;
+}
+
 temaAtual = window.MindNoteTheme?.obter?.() || temaAtual;
 aplicarTemaNaInterface();
 try {
-const espacamentoSalvo = Number(localStorage.getItem("mindnote_default_line_spacing"));
-if (Number.isInteger(espacamentoSalvo) && espacamentoSalvo >= 26 && espacamentoSalvo <= 120) entradaEscala.value = String(espacamentoSalvo);
+const espacamentoSalvo = Number(localStorage.getItem("mn_ruling_line_height") || localStorage.getItem("mindnote_default_line_spacing"));
+if (Number.isInteger(espacamentoSalvo) && espacamentoSalvo >= 18 && espacamentoSalvo <= 36) entradaEscala.value = String(espacamentoSalvo);
 } catch { /* mantém o padrão de 26 px */ }
 
 botaoExportar.disabled = true;
@@ -540,7 +677,7 @@ botaoExportar.disabled = true;
 // sanitizador ou o diagnóstico não estiverem carregados por algum motivo,
 // cai de volta para o comportamento original (texto bruto direto ao
 // parser), preservando 100% a compatibilidade com o fluxo consolidado.
-botaoProcessar.addEventListener("click", () => {
+botaoProcessar?.addEventListener("click", () => {
 areaErro.textContent = "";
 const textoBruto = textarea.value;
 
@@ -563,10 +700,13 @@ const listaTitulos = candidatos
 .map((c, i) => `${i + 1}. ${c.titulo}`)
 .join("\n");
 const escolha = window.prompt(
-`Foram identificados ${candidatos.length} mapas. Qual deseja carregar?\n\n${listaTitulos}\n\nDigite o número:`,
+`Foram identificados ${candidatos.length} mapas. Digite um número para carregar um deles ou 0 para unificar todos como raízes independentes.\n\n${listaTitulos}`,
 "1"
 );
 const indice = Number(escolha) - 1;
+if (String(escolha).trim() === "0" && window.ParserSanitizer?.combinarCandidatos) {
+jsonParaProcessar = window.ParserSanitizer.combinarCandidatos(candidatos);
+} else {
 if (
 !Number.isInteger(indice) ||
 indice < 0 ||
@@ -576,6 +716,7 @@ areaErro.textContent = "Nenhum mapa selecionado.";
 return;
 }
 jsonParaProcessar = candidatos[indice].jsonTexto;
+}
 } else {
 jsonParaProcessar = resultadoSanitizacao.jsonTexto;
 }
@@ -600,7 +741,7 @@ botaoExportar.disabled = true;
 }
 });
 
-entradaEscala.addEventListener("change", () => {
+entradaEscala?.addEventListener("change", () => {
 if (!arvoresAtuais) return;
 try {
 reprocessarERenderizar();
@@ -611,7 +752,7 @@ areaErro.textContent = erro.message;
 }
 });
 
-botaoTema.addEventListener("click", () => {
+botaoTema?.addEventListener("click", () => {
 temaAtual = window.MindNoteTheme?.alternar?.() || (temaAtual === "claro" ? "escuro" : "claro");
 window.dispatchEvent(new CustomEvent("mindnote:theme-change", { detail: { theme: temaAtual } }));
 aplicarTemaNaInterface();
@@ -619,7 +760,7 @@ reprocessarERenderizar();
 agendarAutosave();
 });
 
-botaoNovaRaiz.addEventListener("click", () => {
+botaoNovaRaiz?.addEventListener("click", () => {
 try {
 MindNoteApp.adicionarNovaRaiz();
 } catch (erro) {
@@ -634,7 +775,7 @@ window.MindNoteRouter?.navegarPara("home");
 });
 
 // ─── Listener de exportação PDF — repassa temaAtual ─────────────────────
-botaoExportar.addEventListener("click", () => {
+botaoExportar?.addEventListener("click", () => {
 areaErro.textContent = "";
 if (
 !Array.isArray(arvoresAtuais) ||

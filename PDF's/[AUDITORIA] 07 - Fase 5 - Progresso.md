@@ -113,3 +113,50 @@ Esta seção registra a análise forense das regressões reportadas e a correç�
 - Sintaxe JavaScript verificada com `node --check` nos módulos alterados; checagens estáticas de IDs e CSS e `git diff --check` concluídas sem erros.
 - Nenhuma alteração em `js/engine.geometry.js` ou `js/engine.text.js`.
 - A inspeção visual no navegador não foi realizada nesta entrega.
+
+## Correções de causas raiz — Zoom, telemetria, PDF e BYOB
+
+- **Zoom sem teto de aproximação:** removido o limite máximo de 10× da câmera, do Zoom Dock e do gesto wheel/pinch, além do limite configurável máximo. O clamp comum em `MindNoteCamera.limitarEstadoZoom()` conserva apenas o piso de 1 px para largura/altura do viewBox e o zoom mínimo de afastamento configurado. Removido o campo de zoom máximo da interface, que mantinha um teto padrão mesmo após retirar o limite 10×.
+- **Telemetria dos Bastidores:** `obterSnapshotTelemetria()` foi incluída na API pública de `MindNoteSettings`, e o adaptador `MindNoteDevTelemetry` passou a delegar nessa API, corrigindo a referência fora do escopo da IIFE. `open()` agora garante o evento `mindnote:backstage-change` em `finally`, iniciando o monitor RAF imediatamente mesmo se a amostra inicial falhar. O loop continua atualizando FPS, heap, bounding box e nós ativos a cada 500 ms.
+- **Texto PDF:** a posição das linhas agora replica o cálculo do primeiro `tspan` SVG a partir de `dimensoes.titulo.linhasQuebradas`, com avanço fixo de 22 px e alinhamento `middle` no jsPDF. A sequência vetorial mantém conectores atrás dos nós, como no renderer SVG, e desenha pílulas antes das caixas de anotação. Bounding box e página continuam dinâmicos em `W + 80 px` por `H + 80 px`.
+- **BYOB:** o teste persiste URL base normalizada, chave e senha aparadas antes da requisição, exige HTTPS e URL base sem caminho/query/hash, e exibe sucesso como “Conectado à API REST · HTTP 200” com indicação explícita de que acesso/criação da tabela de dados ainda não foi verificado. Erros de armazenamento local são informados.
+- **Blindagem:** `js/engine.geometry.js` e `js/engine.text.js` permaneceram intocados.
+- **Validação desta correção:** `node --check` passou em `canvas.camera.js`, `canvas.zoomdock.js`, `backstage.panel.js`, `render.pdf.js`, `render.svg.js` e `settings.manager.js`; `git diff --check` passou. IDs DOM usados pela telemetria, configuração de zoom e teste BYOB conferidos; três folhas CSS existentes passaram pela contagem de chaves balanceadas. Os módulos protegidos não aparecem no diff.
+
+## Etapa 0 — Rota de Configurações e telemetria em tempo real
+
+- Criada a view de nível raiz `#view-config`, irmã de `#view-home` e `#view-editor`, com sidebar própria e shell de preferências em tela cheia. A antiga marcação de configurações foi removida da Home.
+- O roteador reconhece `#/config` e `#config`, lê uma aba opcional pela query string, alterna entre Home, Editor e Configurações, preserva o Editor ao voltar da rota e fecha Bastidores ao sair do Editor. Os atalhos da sidebar da Home, BYOB e barra superior do Editor navegam pela API do roteador.
+- A navegação de preferências contém oito abas: Usuário, Canvas, PDF, Sync, Layout, IA Hub, Pautas e Dev (visível conforme o modo desenvolvedor). A view usa layout responsivo e mantém a rolagem do conteúdo dentro da shell.
+- Em Bastidores → Metadados, a seleção da aba faz uma leitura imediata pelo adaptador `MindNoteDevTelemetry` e inicia atualização a cada 500 ms de FPS, heap, bounding box e nós. O intervalo é encerrado ao fechar a gaveta ou retornar ao JSON; o monitor RAF de FPS também acompanha a visibilidade da aba.
+- O clique do menu kebab dos cartões chama `preventDefault()` e `stopPropagation()` antes de consultar ou alternar o popover, mantendo o mapa atual fechado ao abrir ações.
+- Blindagem: `js/engine.geometry.js` e `js/engine.text.js` permanecem intactos.
+
+## Etapa 1 — Abas Usuário & Aparência e Pautas & Calibração
+
+- **Usuário & Aparência:** adicionado tema segmentado (claro/escuro/sistema), cartões Liquid Glass/Solid Minimalist, slider de blur 8–40px, seis swatches de acento e densidade compacta/confortável. Preferências persistidas nas chaves `mindnote_theme_pref`, `mn_ui_variant`, `mn_blur_intensity`, `mn_accent_color` e `mn_ui_density`; alterações comunicadas pelo barramento `mindnote:theme-change` e `mindnote:settings-change`.
+- **Pautas & Calibração:** adicionados quatro modelos de pauta, stepper de entrelinha 18–36px, controles de espessura/opacidade, fonte de título e prévia SVG reativa. As chaves `mn_default_ruling_type`, `mn_ruling_line_height`, `mn_ruling_stroke_width`, `mn_ruling_opacity` e `mn_font_family_title` são persistidas imediatamente; mudanças vetoriais emitem `mindnote:ruling-change`. O modelo selecionado é anexado às novas anotações; o cálculo do Editor foi conectado à entrelinha de 18–36px e reprocessa o mapa aberto.
+- **Prévia e layout:** preview em SVG inline reage aos controles sem recarregar; CSS das seções, cartões, swatches e preview acomoda tablet/mobile e mantém a rolagem no contêiner central.
+- **Auditoria:** `ESPECIFICACAO_CENTRAL_CONFIGURACOES_2.md` não estava presente no workspace; implementação baseada nos contratos completos desta solicitação. `engine.geometry.js` e `engine.text.js` não foram alterados.
+
+## Etapa 2 — Abas Canvas & Entrada e Exportação PDF
+
+- **Canvas & Entrada:** substituídos os controles legados por sensibilidade de pan (0,5×–2×), curva suave/linear, limite de afastamento (10–50%), limite de aproximação (100–800%), trava de rotação e modo de caneta estrita. `obterCanvasConfig()` expõe os valores atuais; `MindNoteCamera.calcularFatorZoom()` centraliza a progressão aplicada pelo pinch, wheel e Zoom Dock. No modo de caneta estrita, somente ponteiros `pen` ativam hitboxes/controles; demais ponteiros navegam o canvas.
+- **Exportação PDF:** adicionadas margem configurável (20–150px, padrão 60), formato contínuo (padrão) e opções de paginação A4 paisagem/A3 em ladrilhos vetoriais 1:1, paridade de tema, visibilidade das pautas e metadados. O Bounding Box usa o `getBBox()` real do SVG quando disponível, com a margem simétrica definida; fallback geométrico mantém a mesma regra. O modo contínuo instancia o jsPDF no tamanho exato `W + 2*margem` por `H + 2*margem`.
+- **Contratos de persistência:** cada controle salva sua chave `mn_*` em alteração e anuncia `mindnote:settings-change`; o PDF lê as preferências persistidas no início da exportação. A política de página contínua 1:1 segue como padrão; nenhum papel fixo é usado por padrão.
+- **Validação:** `node --check` executado nos módulos JavaScript alterados, IDs HTML sem duplicações, chaves CSS balanceadas e `git diff --check` sem erros. `engine.geometry.js` e `engine.text.js` permanecem intocados.
+
+## Etapa 3 — Abas Layout & Motor Geométrico e IA Hub
+
+- **IA Hub:** criado catálogo selecionável de quatro prompts especializados (vestibular, exatas, biologia e história), preview monospaçado e botão de cópia com feedback tátil, além do link seguro para NotebookLM. A preferência de prompt é salva em `mn_prompt_template_active`; Home e Editor copiam o prompt ativo.
+- **Higienização:** adicionados os switches `mn_sanitizer_aggressive`, `mn_sanitizer_multi_modal` e `mn_markdown_outline_support`, conectados ao sanitizador usado tanto no Editor quanto na importação da Home. Múltiplos blocos permitem escolha ou união de raízes; outline Markdown é convertido ao schema MindNote.
+- **Layout:** adicionados cards ilustrados para árvore horizontal, radial, grid livre e briefing vertical, calibração dos três gaps e tensionamento Bézier com rota ortogonal opcional. `obterLayoutConfig()` expõe parâmetros; `app.js` aplica layout/intervalos após o cálculo protegido e antes do SVG, sem editar os motores geométricos/textuais.
+- **Barramento e persistência:** cada seleção/controle persiste em `localStorage` e publica evento `mindnote:prompt-template-change`, `mindnote:sanitizer-config-change` ou `mindnote:layout-change` (além do evento geral de configuração).
+- **Validação:** `node --check` nos módulos JavaScript alterados, `git diff --check`, contagem de IDs, balanceamento CSS e smoke test do outline com nível aninhado. Os módulos `engine.geometry.js` e `engine.text.js` permanecem intocados.
+
+## Correção de runtime — travamento da Home e integridade das rotas
+
+- **Causa raiz no fluxo:** os handlers das preferências de layout e entrelinha chamavam `MindNoteApp.reprocessarERenderizar()` sem verificar a view ativa. Essa chamada alcançava geometria/SVG mesmo com o Editor oculto, misturando estado de configurações com ciclo de renderização do canvas. O bootstrap do Editor também usava ouvintes DOM sem guarda nos elementos obrigatórios, tornando uma divergência de markup uma exceção não tratada; o clique delegado da Home assumia que `event.target` sempre expunha `.closest()`.
+- **Correção:** centralizado em `settings.manager.js` o despacho de recálculo, condicionado ao `#view-editor` estar visível; `app.js` passou a aplicar a mesma barreira no início de `reprocessarERenderizar()` e a validar os elementos obrigatórios do bootstrap antes de instalar os handlers. As ações das Abas 5/6 agora obtêm alvos com `event.target?.closest?.(...)` e validam o alvo antes de ler `dataset`.
+- **Router Integrity:** a troca de rotas oculta a view de saída e revela a de entrada no mesmo turno de execução, em vez de aguardar 220 ms. Assim, `#/config` mostra `#view-config` e oculta a Home imediatamente, sem listeners de navegação circulares; o callback de cada destino é chamado após a atualização síncrona do estado da view.
+- **Verificações:** `node --check` passou nos 19 scripts JavaScript referenciados pelo `index.html`; `git diff --check` passou; simulação de importação na ordem dos 19 scripts e execução dos cinco callbacks `DOMContentLoaded` passou com DOM mínimo e stub do IndexedDB. O navegador bloqueou a abertura de `file://` pelo controle de URL desta sessão, portanto não foi possível confirmar o texto exato do console de uma execução visual real. Os arquivos `engine.geometry.js` e `engine.text.js` não aparecem no diff.

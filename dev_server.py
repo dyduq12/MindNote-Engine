@@ -5,7 +5,7 @@ import http.server
 import os
 import socketserver
 
-PORT = 8080
+PORT = 8081
 DIRETORIO = os.path.dirname(os.path.abspath(__file__))
 
 

@@ -25,6 +25,9 @@ function el(tag, a = {}) {
   return e;
 }
 const COR_PADRAO_NEUTRA = "#64748b";
+function exigirCaneta(e) {
+  return Boolean(window.MindNoteSettings?.obterCanvasConfig?.().modoCanetaEstrita && e.pointerType !== "pen");
+}
 function percorrerArvore(no, cb, corPai = null) {
   const corEfetiva = no.cor || corPai || COR_PADRAO_NEUTRA;
   cb(no, corEfetiva);
@@ -45,10 +48,12 @@ function adicionarHitbox(g, limites, raio, no, tipo, elemento, pos) {
   });
   hitbox.style.strokeWidth = '0';
   hitbox.addEventListener("pointerdown", e => {
+    if (exigirCaneta(e)) return;
     if (e.pointerType === "touch" && e.isPrimary === false) return;
     e.stopPropagation();
   });
   hitbox.addEventListener("click", e => {
+    if (exigirCaneta(e)) { e.preventDefault(); e.stopPropagation(); return; }
     e.stopPropagation();
     selecionar(no, tipo, elemento, pos);
   });
@@ -86,8 +91,8 @@ function acaoToolbar(rotulo, acao) {
   b.appendChild(r);
   b.appendChild(t);
   // Impede que cliques na toolbar disparem o listener de pointerdown do SVG
-  b.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); });
-  b.addEventListener('click', e => { e.stopPropagation(); acao(); });
+  b.addEventListener('pointerdown', e => { if (exigirCaneta(e)) return; e.stopPropagation(); e.preventDefault(); });
+  b.addEventListener('click', e => { if (exigirCaneta(e)) { e.preventDefault(); e.stopPropagation(); return; } e.stopPropagation(); acao(); });
   return b;
 }
 
@@ -198,7 +203,7 @@ function adicionarHandleResize(no, pos, d, g, anexo, svg) {
     width: 48, height: 8, rx: 4,
     class: 'mindnote-handle mindnote-resize-handle',
   });
-  handle.addEventListener('pointerdown', e => iniciarResize(no, anexo, handle, e, svg));
+  handle.addEventListener('pointerdown', e => { if (exigirCaneta(e)) return; iniciarResize(no, anexo, handle, e, svg); });
   // pointermove e pointerup são escutados no SVG para funcionar mesmo se o dedo sair do handle
   g.appendChild(handle);
 }
@@ -226,10 +231,12 @@ function caixa(no, pos, d, g, anexo, svg, corEfetiva) {
   // Fase 3.4 (fix): não bloqueia o 2º dedo de uma pinça — deixa borbulhar
   // até o SVG para montar o par de toques do pinch-to-zoom.
   r.addEventListener('pointerdown', e => {
+    if (exigirCaneta(e)) return;
     if (e.pointerType === 'touch' && e.isPrimary === false) return;
     e.stopPropagation();
   });
   r.addEventListener('click', e => {
+    if (exigirCaneta(e)) { e.preventDefault(); e.stopPropagation(); return; }
     e.stopPropagation();
     selecionar(no, 'anotacao', r, { x, y: y - 52 });
   });
@@ -317,23 +324,15 @@ function criarInteracaoViewport(svg, root, d) {
     const py = estado.viewBox.y + v * estado.viewBox.height;
 
     const config = window.MindNoteSettings?.obterCanvasConfig?.() || {};
-    const minZoom = Math.max(0.1, Math.min(1, Number(config.zoomMin) || 0.1));
-    const maxZoom = Math.max(minZoom + 0.1, Math.min(10, Number(config.zoomMax) || 4));
-    // Magnification limits are inverse to viewBox dimensions: lower zoom means
-    // a wider viewBox (zooming out), while higher zoom means a narrower one.
-    const minW = estado.inicial.width / maxZoom;
-    const minH = estado.inicial.height / maxZoom;
-    const maxW = estado.inicial.width / minZoom;
-    const maxH = estado.inicial.height / minZoom;
-    const sensibilidade = Math.max(0.5, Math.min(2, Number(config.sensibilidade) || 1));
-    const fatorSensivel = Math.pow(fator, sensibilidade);
-    const novoW = Math.max(minW, Math.min(maxW, estado.viewBox.width * fatorSensivel));
-    const novoH = Math.max(minH, Math.min(maxH, estado.viewBox.height * fatorSensivel));
-
-    estado.viewBox.x = px - u * novoW;
-    estado.viewBox.y = py - v * novoH;
-    estado.viewBox.width = novoW;
-    estado.viewBox.height = novoH;
+    const fatorSensivel = window.MindNoteCamera?.calcularFatorZoom?.(fator, estado.viewBox, d, config.curvaZoom) ?? fator;
+    const novoW = estado.viewBox.width * fatorSensivel;
+    const novoH = estado.viewBox.height * fatorSensivel;
+    const x = px - u * novoW;
+    const y = py - v * novoH;
+    const candidato = window.MindNoteCamera.limitarEstadoZoom(svg, {
+      x, y, width: novoW, height: novoH,
+    });
+    Object.assign(estado.viewBox, candidato);
 
     limitar();
     aplicar();
@@ -341,7 +340,7 @@ function criarInteracaoViewport(svg, root, d) {
 
   // ── pointerdown: captura APENAS se o alvo NÃO for elemento interativo ──────
   svg.addEventListener('pointerdown', e => {
-    if (ehElementoInterativo(e.target)) return;   // NUNCA capturar sobre nó/caixa/handle/toolbar
+    if (ehElementoInterativo(e.target) && !exigirCaneta(e)) return;   // em modo estrito, dedos/mouse navegam mesmo sobre hitboxes
     // Fase 3.3 (fix): resincroniza o estado interno de pan/zoom com o viewBox
     // real do DOM antes de iniciar qualquer gesto. Corrige o "tick" que
     // ocorria quando o viewBox era alterado externamente (MindNoteCamera,
@@ -480,7 +479,11 @@ function renderizarArvoreSVG(arvores, container) {
     no.conectoresFilhos.forEach(k => {
       const c = k.curva;
       root.appendChild(el('path', {
-        d: `M${c.p0.x},${c.p0.y} C${c.p1.x},${c.p1.y} ${c.p2.x},${c.p2.y} ${c.p3.x},${c.p3.y}`,
+        d: c.roteamento === 'ortogonal'
+          ? c.eixo === 'vertical'
+            ? `M${c.p0.x},${c.p0.y} L${c.p0.x},${(c.p0.y + c.p3.y) / 2} L${c.p3.x},${(c.p0.y + c.p3.y) / 2} L${c.p3.x},${c.p3.y}`
+            : `M${c.p0.x},${c.p0.y} L${(c.p0.x + c.p3.x) / 2},${c.p0.y} L${(c.p0.x + c.p3.x) / 2},${c.p3.y} L${c.p3.x},${c.p3.y}`
+          : `M${c.p0.x},${c.p0.y} C${c.p1.x},${c.p1.y} ${c.p2.x},${c.p2.y} ${c.p3.x},${c.p3.y}`,
         stroke: corConector,
         'stroke-width': 2.5, fill: 'none', 'stroke-linecap': 'round',
       }));

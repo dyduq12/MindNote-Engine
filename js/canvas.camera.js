@@ -9,14 +9,25 @@
 const MARGEM_FOCO = 120;
 const DURACAO_FOCO_MS = 320;
 
+function calcularFatorZoom(fator, estado, dimensoes, curva = "suave") {
+  if (!estado || !dimensoes) return fator;
+  if (curva === "linear") return fator;
+  const zoomAtual = Math.sqrt((dimensoes.larguraTotal * dimensoes.alturaTotal) / Math.max(1, estado.width * estado.height));
+  return Math.pow(fator, 1 / Math.max(1, zoomAtual / 4));
+}
+
 function limitarEstadoZoom(svg, estado) {
   const config = window.MindNoteSettings?.obterCanvasConfig?.() || {};
   const dimensoes = window.MindNoteApp?.obterArvoresAtuais?.()?.[0]?.canvasDimensoes;
-  if (!dimensoes) return estado;
-  const min = Math.max(0.1, Math.min(1, Number(config.zoomMin) || 0.1));
-  const max = Math.max(1.5, Math.min(10, Number(config.zoomMax) || 4));
-  const width = Math.max(dimensoes.larguraTotal / max, Math.min(dimensoes.larguraTotal / min, estado.width));
-  const height = Math.max(dimensoes.alturaTotal / max, Math.min(dimensoes.alturaTotal / min, estado.height));
+  if (!dimensoes || !estado) return estado;
+  const min = Math.max(0.1, Math.min(0.5, Number(config.zoomMin) || 0.1));
+  const max = Math.max(1, Math.min(8, Number(config.zoomMax) || 4));
+  const minWidth = Math.max(1, dimensoes.larguraTotal / max);
+  const minHeight = Math.max(1, dimensoes.alturaTotal / max);
+  const maxWidth = dimensoes.larguraTotal / min;
+  const maxHeight = dimensoes.alturaTotal / min;
+  const width = Math.max(minWidth, Math.min(maxWidth, Number(estado.width) || minWidth));
+  const height = Math.max(minHeight, Math.min(maxHeight, Number(estado.height) || minHeight));
   const cx = estado.x + estado.width / 2, cy = estado.y + estado.height / 2;
   return { x: cx - width / 2, y: cy - height / 2, width, height };
 }
@@ -88,6 +99,7 @@ function focarNo(svg, no) {
 }
 
 window.MindNoteCamera = {
+  calcularFatorZoom,
   capturarEstado,
   restaurarEstado,
   centralizarMapa,
