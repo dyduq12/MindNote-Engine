@@ -1,0 +1,4 @@
+server/logs_servidor/
+**/__pycache__/
+server/.env
+.env
